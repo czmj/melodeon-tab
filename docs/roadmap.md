@@ -2,7 +2,7 @@
 
 Steps in dependency order. Tick as completed; update this file as plans change.
 
-- [ ] **1. abcjs spike** — feed 2–3 real tunes (src/fixtures/*.abc) through abcjs, dump parsed structure. Confirm extraction of: pitch sequence + durations, bar positions, metre, key-signature-applied accidentals, ties, repeats. Decide: does MVP unroll repeats or tab as written? Output: findings note + decision, then the adapter shape.
+- [x] **1. abcjs spike** — feed 2–3 real tunes (src/fixtures/*.abc) through abcjs, dump parsed structure. Confirm extraction of: pitch sequence + durations, bar positions, metre, key-signature-applied accidentals, ties, repeats. Decide: does MVP unroll repeats or tab as written? Output: findings note + decision, then the adapter shape. → **Done:** docs/abcjs-spike-findings.md; decision = tab as written, no unroll (ADR 0006).
 - [ ] **2. Core data model** — finalise types in src/domain: instrument schema, D/G treble instance (**pitch map currently a placeholder — fill in and verify against a real box before relying on it**), note sequence, fingering result (chosen candidate + alternatives + pinned flag + confidence).
 - [ ] **3. Candidate mapping + feasibility** — pure fn: note → candidates. Test against fixtures; confirm diatonic gaps surface correctly.
 - [ ] **4. DP engine, naive costs** — constant reversal cost, small row-change cost. Signature `cost(from, to, context)` from day one, context ignored initially. Verify optimality and pin-and-recompute.
