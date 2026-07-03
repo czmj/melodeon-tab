@@ -181,6 +181,18 @@ Checked the empirical findings against docs.abcjs.net and the paulrosen/abcjs ex
   — but we only use `parseOnly` for *structure*, never for sounding pitch, so we don't depend on
   those integer values.
 
+- **⚠️ `parseOnly` is officially deprecated** ("still works … might go away sometime"). The
+  docs supersede it with `renderAbc("*", abc, params)`, which returns richer data. We are
+  **keeping `parseOnly`**: verified empirically that `renderAbc("*")` throws `document is not
+  defined` headless (the `"*"` sentinel skips rendering to an element but the call still needs
+  a DOM), whereas `parseOnly` parses without one. `parseOnly` is the only headless full-parse
+  API, and `parseAbc` must stay DOM-free so its vitest suite runs in Node and parsing stays
+  decoupled from rendering. Escape hatch if `parseOnly` is ever removed: either switch the test
+  environment to jsdom/happy-dom and adopt `renderAbc("*")`, or stay on the last version that
+  ships `parseOnly`. Contained by Invariant 2 (abcjs lives only in `src/parse`).
+  (`renderStaff.ts`'s `renderAbc(target, …)` — rendering to a real element — is *not*
+  deprecated.)
+
 Net: findings stand. The one adjustment is defensive — pin abcjs and add fixture round-trip
 tests when the adapter is built, because the parsed structure we walk is officially unstable
-across versions.
+across versions, and `parseOnly` (though the only headless option) is on a deprecation path.
