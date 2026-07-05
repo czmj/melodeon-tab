@@ -1,31 +1,7 @@
 import { parseOnly } from 'abcjs'
 import type { TuneObject } from 'abcjs'
-
-export interface PrototypeNote {
-  index: number
-  writtenNames: string[]
-  midiPitches: number[]
-  durationWholeNotes: number
-  bar: number
-  startChar: number
-  rest: boolean
-}
-
-export interface PrototypeBar {
-  beforeNoteIndex: number
-  type: string
-  startEnding?: string
-  endEnding?: boolean
-}
-
-export interface PrototypeTune {
-  title: string
-  key: string
-  metre: string
-  notes: PrototypeNote[]
-  bars: PrototypeBar[]
-  warnings: string[]
-}
+import { PPWN, basicBeatStrength, wholeNotesToTicks } from '../domain/notes.ts'
+import type { BarMarker, NoteEvent, Tune } from '../domain/notes.ts'
 
 function keyLabel(tune: TuneObject): string {
   const k = tune.getKeySignature()
@@ -35,9 +11,9 @@ function keyLabel(tune: TuneObject): string {
   return `${root}${mode}`
 }
 
-function metreLabel(tune: TuneObject): string {
+function metreTuple(tune: TuneObject): [number, number] {
   const m = tune.getMeterFraction()
-  return `${m.num}/${m.den ?? 4}`
+  return [m.num, m.den ?? 4]
 }
 
 function audioPitchMap(tune: TuneObject): Map<number, number[]> {
@@ -62,14 +38,18 @@ function audioPitchMap(tune: TuneObject): Map<number, number[]> {
   return map
 }
 
-export function parseAbc(abc: string): PrototypeTune[] {
+export function parseAbc(abc: string): Tune[] {
   const tunes: TuneObject[] = parseOnly(abc)
   return tunes.map((tune) => {
     const pitchMap = audioPitchMap(tune)
-    const notes: PrototypeNote[] = []
-    const bars: PrototypeBar[] = []
+    const metre = metreTuple(tune)
+    const notes: NoteEvent[] = []
+    const bars: BarMarker[] = []
     let bar = 1
     let seenNoteInBar = false
+    let startTicks = 0
+    let barStartTicks = 0
+    let pendingBoundary = true
 
     const items = tune.lines
       .flatMap((line) => line.staff ?? [])
@@ -80,21 +60,32 @@ export function parseAbc(abc: string): PrototypeTune[] {
       if (item.el_type === 'note') {
         const rest = item.rest !== undefined
         const pitches: Array<{ name?: string; endTie?: unknown }> = item.pitches ?? []
+        const durationTicks = wholeNotesToTicks(item.duration)
         const tiedFromPrevious =
           !rest && pitches.length > 0 && pitches.every((p) => p.endTie)
         if (tiedFromPrevious && notes.length > 0) {
-          notes[notes.length - 1].durationWholeNotes += item.duration
-        } else {
-          notes.push({
-            index: notes.length,
-            writtenNames: rest ? ['z'] : pitches.map((p) => p.name ?? '?'),
-            midiPitches: pitchMap.get(item.startChar) ?? [],
-            durationWholeNotes: item.duration,
-            bar,
-            startChar: item.startChar,
-            rest,
-          })
+          notes[notes.length - 1].durationTicks += durationTicks
+          startTicks += durationTicks
+          seenNoteInBar = true
+          continue
         }
+        const midis = pitchMap.get(item.startChar) ?? []
+        const writtenNames = pitches.map((p) => p.name ?? '?')
+        notes.push({
+          index: notes.length,
+          pitch: rest || midis.length === 0 ? 0 : Math.max(...midis),
+          writtenName: rest ? 'z' : writtenNames[writtenNames.length - 1] ?? '?',
+          durationTicks,
+          startTicks,
+          bar,
+          startChar: item.startChar,
+          rest,
+          flattenedChord: !rest && pitches.length > 1 ? true : undefined,
+          beatStrength: basicBeatStrength(startTicks - barStartTicks, metre),
+          phraseBoundaryBefore: pendingBoundary,
+        })
+        pendingBoundary = rest || durationTicks >= PPWN / 2
+        startTicks += durationTicks
         seenNoteInBar = true
       } else if (item.el_type === 'bar') {
         bars.push({
@@ -105,6 +96,7 @@ export function parseAbc(abc: string): PrototypeTune[] {
         })
         if (seenNoteInBar) {
           bar += 1
+          barStartTicks = startTicks
           seenNoteInBar = false
         }
       }
@@ -113,10 +105,9 @@ export function parseAbc(abc: string): PrototypeTune[] {
     return {
       title: tune.metaText.title ?? '',
       key: keyLabel(tune),
-      metre: metreLabel(tune),
+      metre,
       notes,
       bars,
-      warnings: tune.warnings ?? [],
     }
   })
 }

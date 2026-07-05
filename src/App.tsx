@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { parseAbc } from './parse/parseAbc.ts'
-import type { PrototypeTune } from './parse/parseAbc.ts'
+import type { BarMarker, Tune } from './domain/notes.ts'
 import { renderStaffNotation } from './parse/renderStaff.ts'
 import { midiToName } from './domain/pitch.ts'
 import moonAbc from './fixtures/moon-and-seven-stars.abc?raw'
@@ -13,7 +13,7 @@ const fixtures = [
   { name: 'The Banshee', abc: bansheeAbc },
 ]
 
-function BarRow({ bar }: { bar: PrototypeTune['bars'][number] }) {
+function BarRow({ bar }: { bar: BarMarker }) {
   return (
     <tr>
       <td colSpan={6}>
@@ -25,9 +25,9 @@ function BarRow({ bar }: { bar: PrototypeTune['bars'][number] }) {
   )
 }
 
-function TuneView({ tune }: { tune: PrototypeTune }) {
+function TuneView({ tune }: { tune: Tune }) {
   const barsBefore = useMemo(() => {
-    const map = new Map<number, PrototypeTune['bars']>()
+    const map = new Map<number, BarMarker[]>()
     for (const b of tune.bars) {
       const list = map.get(b.beforeNoteIndex) ?? []
       list.push(b)
@@ -40,15 +40,8 @@ function TuneView({ tune }: { tune: PrototypeTune }) {
     <div>
       <h2>{tune.title || '(untitled)'}</h2>
       <p>
-        Key: {tune.key} · Metre: {tune.metre} · Notes: {tune.notes.length}
+        Key: {tune.key} · Metre: {tune.metre[0]}/{tune.metre[1]} · Notes: {tune.notes.length}
       </p>
-      {tune.warnings.length > 0 && (
-        <ul>
-          {tune.warnings.map((w, i) => (
-            <li key={i}>Warning: {w}</li>
-          ))}
-        </ul>
-      )}
       <table border={1} cellPadding={4}>
         <thead>
           <tr>
@@ -57,7 +50,7 @@ function TuneView({ tune }: { tune: PrototypeTune }) {
             <th>Written</th>
             <th>Sounding (MIDI)</th>
             <th>Sounding (name)</th>
-            <th>Duration</th>
+            <th>Duration (ticks)</th>
           </tr>
         </thead>
         <tbody>
@@ -69,10 +62,13 @@ function TuneView({ tune }: { tune: PrototypeTune }) {
               <tr>
                 <td>{n.index}</td>
                 <td>{n.bar}</td>
-                <td>{n.writtenNames.join(' ')}</td>
-                <td>{n.rest ? '—' : n.midiPitches.join(' ')}</td>
-                <td>{n.rest ? 'rest' : n.midiPitches.map(midiToName).join(' ')}</td>
-                <td>{n.durationWholeNotes}</td>
+                <td>
+                  {n.writtenName}
+                  {n.flattenedChord ? ' (chord→top)' : ''}
+                </td>
+                <td>{n.rest ? '—' : n.pitch}</td>
+                <td>{n.rest ? 'rest' : midiToName(n.pitch)}</td>
+                <td>{n.durationTicks}</td>
               </tr>
             </Fragment>
           ))}
@@ -103,7 +99,7 @@ export function App() {
     try {
       return { tunes: parseAbc(abc), error: null as string | null }
     } catch (e) {
-      return { tunes: [] as PrototypeTune[], error: String(e) }
+      return { tunes: [] as Tune[], error: String(e) }
     }
   }, [abc])
 
