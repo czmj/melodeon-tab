@@ -1,13 +1,40 @@
 import type { Candidate } from './instrument'
 
+export const PPWN = 720
+
+export function wholeNotesToTicks(wholeNotes: number): number {
+  return Math.round(wholeNotes * PPWN)
+}
+
+export function basicBeatStrength(positionInBarTicks: number, metre: [number, number]): number {
+  const [num, den] = metre
+  const barTicks = num * (PPWN / den)
+  const mainBeats = den === 8 && num % 3 === 0 ? num / 3 : num
+  const mainBeatTicks = barTicks / mainBeats
+  if (positionInBarTicks === 0) return 1
+  if (positionInBarTicks % mainBeatTicks === 0) return 0.6
+  return 0.2
+}
+
 export interface NoteEvent {
   index: number
   pitch: number
+  writtenName: string
   durationTicks: number
   startTicks: number
   bar: number
+  startChar: number
+  rest: boolean
+  flattenedChord?: boolean
   beatStrength: number
   phraseBoundaryBefore: boolean
+}
+
+export interface BarMarker {
+  beforeNoteIndex: number
+  type: string
+  startEnding?: string
+  endEnding?: boolean
 }
 
 export interface Tune {
@@ -15,6 +42,7 @@ export interface Tune {
   key: string
   metre: [number, number]
   notes: NoteEvent[]
+  bars: BarMarker[]
 }
 
 export interface FingeredNote {
@@ -23,6 +51,7 @@ export interface FingeredNote {
   alternatives: Candidate[]
   pinned: boolean
   confidence: number
+  costMargin: number
 }
 
 export interface FingeringResult {
@@ -36,8 +65,4 @@ export interface CostContext {
   phraseBoundaryBefore: boolean
 }
 
-export type CostFn = (
-  from: Candidate | null,
-  to: Candidate,
-  context: CostContext
-) => number
+export type CostFn = (from: Candidate | null, to: Candidate, context: CostContext) => number
