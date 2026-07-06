@@ -4,7 +4,10 @@ import type { FingeringResult } from '../domain/notes.ts'
 
 export interface TabCell {
   noteIndex: number
-  token: string
+  text: string
+  arrow: string
+  colour: 'red' | 'blue' | null
+  underline: boolean
   playable: boolean
   rest: boolean
 }
@@ -13,11 +16,26 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
   return result.notes.map((fingered, i) => {
     const rest = result.tune.notes[i].rest
     if (fingered.chosen === null) {
-      return { noteIndex: i, token: rest ? '-' : '?', playable: false, rest }
+      return {
+        noteIndex: i,
+        text: rest ? '-' : '?',
+        arrow: '',
+        colour: null,
+        underline: false,
+        playable: false,
+        rest,
+      }
     }
     const { row, position } = resolveCandidate(instrument, fingered.chosen)
-    const rowMark = row === 1 ? "'" : ''
-    const directionMark = fingered.chosen.direction === 'pull' ? '_' : ''
-    return { noteIndex: i, token: `${position}${rowMark}${directionMark}`, playable: true, rest }
+    const push = fingered.chosen.direction === 'push'
+    return {
+      noteIndex: i,
+      text: String(position),
+      arrow: push ? '↑' : '↓',
+      colour: push ? 'red' : 'blue',
+      underline: row === 1,
+      playable: true,
+      rest,
+    }
   })
 }

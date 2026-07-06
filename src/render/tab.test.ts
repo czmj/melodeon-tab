@@ -15,34 +15,47 @@ function tab(abc: string) {
 }
 
 describe('renderTab', () => {
-  it('renders a D-row push as a bare button number', () => {
+  it('renders a D-row push: red, up arrow, no underline', () => {
     const { cells } = tab('X:1\nL:1/8\nK:D\nD|')
-    expect(cells[0].token).toBe('3')
+    expect(cells[0]).toMatchObject({
+      text: '3',
+      arrow: '↑',
+      colour: 'red',
+      underline: false,
+      playable: true,
+    })
   })
 
-  it("marks the G row with a prime and pull with an underscore", () => {
+  it('renders a G-row pull: blue, down arrow, underlined', () => {
     const { cells } = tab('X:1\nL:1/8\nK:C\nc|')
-    expect(cells[0].token).toBe("4'_")
+    expect(cells[0]).toMatchObject({
+      text: '4',
+      arrow: '↓',
+      colour: 'blue',
+      underline: true,
+      playable: true,
+    })
   })
 
   it('renders a rest as a dash', () => {
     const { cells } = tab('X:1\nL:1/8\nK:D\nz|')
-    expect(cells[0].token).toBe('-')
-    expect(cells[0].rest).toBe(true)
+    expect(cells[0]).toMatchObject({ text: '-', rest: true, playable: false })
   })
 
   it('renders an unplayable note as a question mark', () => {
     const { tune, cells } = tab(jiggeryAbc)
     const i = tune.notes.findIndex((n) => n.writtenName === '^A')
-    expect(cells[i].token).toBe('?')
-    expect(cells[i].playable).toBe(false)
+    expect(cells[i]).toMatchObject({ text: '?', playable: false })
   })
 
-  it('produces one cell per note, all well-formed', () => {
+  it('produces one cell per note; playable cells carry a direction arrow and colour', () => {
     const { tune, cells } = tab(moonAbc)
     expect(cells.length).toBe(tune.notes.length)
     for (const cell of cells) {
-      expect(cell.token).toMatch(/^(\d+'?_?|-|\?)$/)
+      if (cell.playable) {
+        expect(['↑', '↓']).toContain(cell.arrow)
+        expect(['red', 'blue']).toContain(cell.colour)
+      }
     }
   })
 })

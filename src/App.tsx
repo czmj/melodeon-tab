@@ -54,21 +54,36 @@ function TuneView({ tune }: { tune: Tune }) {
     return renderTab(fingering, DG_STANDARD)
   }, [tune])
 
-  const tabLine = tab
-    .map((cell, i) => {
-      const barBreak = i > 0 && tune.notes[i].bar !== tune.notes[i - 1].bar
-      return `${barBreak ? '| ' : ''}${cell.token}`
-    })
-    .join(' ')
-
   return (
     <div>
       <h2>{tune.title || '(untitled)'}</h2>
       <p>
         Key: {tune.key} · Metre: {tune.metre[0]}/{tune.metre[1]} · Notes: {tune.notes.length}
       </p>
-      <h3>Tab (provisional — button · ' = G row · _ = pull · ? = unplayable · - = rest)</h3>
-      <pre>{tabLine}</pre>
+      <h3>
+        Tab (provisional — <span style={{ color: 'red' }}>↑ push</span>,{' '}
+        <span style={{ color: 'blue' }}>↓ pull</span>, <u>underline</u> = G row, ? =
+        unplayable, - = rest)
+      </h3>
+      <pre>
+        {tab.map((cell, i) => {
+          const barBreak = i > 0 && tune.notes[i].bar !== tune.notes[i - 1].bar
+          return (
+            <Fragment key={i}>
+              {barBreak ? '| ' : ''}
+              <span
+                style={{
+                  color: cell.colour ?? undefined,
+                  textDecoration: cell.underline ? 'underline' : undefined,
+                }}
+              >
+                {cell.text}
+                {cell.arrow}
+              </span>{' '}
+            </Fragment>
+          )
+        })}
+      </pre>
       <table border={1} cellPadding={4}>
         <thead>
           <tr>
