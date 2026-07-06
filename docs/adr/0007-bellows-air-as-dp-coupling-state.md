@@ -2,7 +2,7 @@
 
 Status: accepted (implementation deferred) · Date: 2026-07-06
 
-Extends ADR 0003 (fingering as shortest-path DP with a pluggable cost function).
+Extends ADR 0003 (fingering as shortest-path Dynamic Programming (DP) with a pluggable cost function).
 
 ## Context
 

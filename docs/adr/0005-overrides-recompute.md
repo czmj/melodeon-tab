@@ -8,7 +8,7 @@ No cost weighting matches every player's taste; contested notes are genuine tast
 
 ## Decision
 
-A user override pins that note's lattice column to a single node and the DP recomputes everything downstream of it. Overrides are never silently discarded. Where best and second-best paths through a region are close in cost, mark those notes as low-confidence in the tab.
+A user override pins that note's lattice column to a single node and the Dynamic Programming (DP) recomputes everything downstream of it. Overrides are never silently discarded. Where best and second-best paths through a region are close in cost, mark those notes as low-confidence in the tab.
 
 ## Consequences
 

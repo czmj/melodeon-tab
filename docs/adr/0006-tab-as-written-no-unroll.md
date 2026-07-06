@@ -7,7 +7,7 @@ Status: accepted · Date: 2026-07-03
 ABC tunes carry repeats (`|: :|`) and variant endings (`|1 … :|2 …`). abcjs exposes this
 structure (`bar_left_repeat`/`bar_right_repeat`, `startEnding`/`endEnding`) and, via its audio
 path, the fully played-out order (see docs/abcjs-spike-findings.md). The fingering engine is a
-shortest-path DP over note-to-note transitions (ADR 0003), so the order it consumes matters:
+shortest-path Dynamic Programming (DP) over note-to-note transitions (ADR 0003), so the order it consumes matters:
 played order makes the `:|`→`|:` jump-back and ending seams real edges, whereas written order
 does not.
 

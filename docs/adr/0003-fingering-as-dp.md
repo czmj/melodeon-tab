@@ -8,7 +8,7 @@ Good fingering resists strict rules: bellows reversals are bad mid-phrase on wea
 
 ## Decision
 
-Build a lattice (column per note, node per (button, row, direction) candidate) and find the cheapest path by DP (Viterbi). All musical judgement lives in a pure function cost(fromNode, toNode, context) where context carries beat strength and phrase-boundary info. Costs are context-dependent — notably reversal cost varies by metrical position. Strategy presets are weight vectors over the same cost terms.
+Build a lattice (column per note, node per (button, row, direction) candidate) and find the cheapest path by Dynamic Programming (DP, the Viterbi algorithm). All musical judgement lives in a pure function cost(fromNode, toNode, context) where context carries beat strength and phrase-boundary info. Costs are context-dependent — notably reversal cost varies by metrical position. Strategy presets are weight vectors over the same cost terms.
 
 ## Consequences
 
