@@ -3,6 +3,10 @@ import { parseAbc } from './parse/parseAbc.ts'
 import type { BarMarker, NoteEvent, Tune } from './domain/notes.ts'
 import { renderStaffNotation } from './parse/renderStaff.ts'
 import { DG_STANDARD, candidatesForPitch } from './domain/instrument.ts'
+import { mapTuneCandidates } from './engine/candidates.ts'
+import { computeFingering } from './engine/fingering.ts'
+import { makeCostFn } from './engine/cost.ts'
+import { renderTab } from './render/tab.ts'
 import { midiToName } from './domain/pitch.ts'
 import moonAbc from './fixtures/moon-and-seven-stars.abc?raw'
 import jiggeryAbc from './fixtures/jiggery-pokerwork.abc?raw'
@@ -44,12 +48,27 @@ function TuneView({ tune }: { tune: Tune }) {
     return map
   }, [tune])
 
+  const tab = useMemo(() => {
+    const lattice = mapTuneCandidates(tune, DG_STANDARD)
+    const fingering = computeFingering(tune, lattice, makeCostFn(DG_STANDARD))
+    return renderTab(fingering, DG_STANDARD)
+  }, [tune])
+
+  const tabLine = tab
+    .map((cell, i) => {
+      const barBreak = i > 0 && tune.notes[i].bar !== tune.notes[i - 1].bar
+      return `${barBreak ? '| ' : ''}${cell.token}`
+    })
+    .join(' ')
+
   return (
     <div>
       <h2>{tune.title || '(untitled)'}</h2>
       <p>
         Key: {tune.key} · Metre: {tune.metre[0]}/{tune.metre[1]} · Notes: {tune.notes.length}
       </p>
+      <h3>Tab (provisional — button · ' = G row · _ = pull · ? = unplayable · - = rest)</h3>
+      <pre>{tabLine}</pre>
       <table border={1} cellPadding={4}>
         <thead>
           <tr>
