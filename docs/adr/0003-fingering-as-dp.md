@@ -16,3 +16,5 @@ Build a lattice (column per note, node per (button, row, direction) candidate) a
 - Cross-row-for-smoothness and idiomatic bounce emerge from weights rather than special-case rules.
 - The cost function is the single seam for presets, future bass-end direction coupling (a chord wanting a direction adds a term), and any learned weights.
 - Weights are hand-tuned against fixture tunes fingered by a real player; no pretence of learned correctness in MVP.
+
+Extended by ADR 0007: history-dependent judgement (bellows air) is handled by carrying the bellows run as DP coupling state and reading it in `cost()` via context — the search tracks the coupling variable, judgement stays in `cost()`.
