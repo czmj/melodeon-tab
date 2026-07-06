@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { parseAbc } from './parse/parseAbc.ts'
-import type { BarMarker, Tune } from './domain/notes.ts'
+import type { BarMarker, NoteEvent, Tune } from './domain/notes.ts'
 import { renderStaffNotation } from './parse/renderStaff.ts'
+import { DG_STANDARD, candidatesForPitch } from './domain/instrument.ts'
 import { midiToName } from './domain/pitch.ts'
 import moonAbc from './fixtures/moon-and-seven-stars.abc?raw'
 import jiggeryAbc from './fixtures/jiggery-pokerwork.abc?raw'
@@ -13,10 +14,17 @@ const fixtures = [
   { name: 'The Banshee', abc: bansheeAbc },
 ]
 
+function candidateLabel(note: NoteEvent): string {
+  if (note.rest) return '—'
+  const candidates = candidatesForPitch(DG_STANDARD, note.pitch)
+  if (candidates.length === 0) return '— unplayable'
+  return candidates.map((c) => `${c.buttonId} ${c.direction}`).join(', ')
+}
+
 function BarRow({ bar }: { bar: BarMarker }) {
   return (
     <tr>
-      <td colSpan={6}>
+      <td colSpan={7}>
         {bar.type}
         {bar.startEnding ? ` (ending ${bar.startEnding})` : ''}
         {bar.endEnding ? ' (end ending)' : ''}
@@ -51,6 +59,7 @@ function TuneView({ tune }: { tune: Tune }) {
             <th>Sounding (MIDI)</th>
             <th>Sounding (name)</th>
             <th>Duration (ticks)</th>
+            <th>Buttons (D/G)</th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +78,7 @@ function TuneView({ tune }: { tune: Tune }) {
                 <td>{n.rest ? '—' : n.pitch}</td>
                 <td>{n.rest ? 'rest' : midiToName(n.pitch)}</td>
                 <td>{n.durationTicks}</td>
+                <td>{candidateLabel(n)}</td>
               </tr>
             </Fragment>
           ))}
