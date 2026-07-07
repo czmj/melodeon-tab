@@ -77,4 +77,18 @@ describe('computeFingering', () => {
     const gapIndex = jiggery.notes.findIndex((n) => n.writtenName === '^A')
     expect(result.notes[gapIndex].chosen).toBeNull()
   })
+
+  it('breaks a long single-direction run when bellows-air pressure builds', () => {
+    const pull = (buttonId: string): Candidate => ({ buttonId, direction: 'pull' })
+    const lattice: Candidate[][] = Array.from({ length: 8 }, () => [push('p'), pull('q')])
+    const airCost: CostFn = (from, to, context) => {
+      if (from === null) return 0
+      if (from.direction !== to.direction) return 1
+      const run = context.sameDirectionRun ?? 0
+      return run >= 3 ? run - 2 : 0
+    }
+    const result = computeFingering(fakeTune(8), lattice, airCost)
+    const directions = new Set(result.notes.map((n) => n.chosen?.direction))
+    expect(directions.size).toBe(2)
+  })
 })

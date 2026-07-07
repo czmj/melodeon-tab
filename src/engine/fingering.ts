@@ -1,8 +1,11 @@
 import type { Candidate } from '../domain/instrument.ts'
 import type { CostContext, CostFn, FingeredNote, FingeringResult, Tune } from '../domain/notes.ts'
 
+const RUN_CAP = 12
+
 interface Node {
   candidate: Candidate
+  run: number
   cost: number
   back: number
 }
@@ -22,11 +25,6 @@ export function computeFingering(
 
   for (let i = 0; i < tune.notes.length; i++) {
     const note = tune.notes[i]
-    const context: CostContext = {
-      metre: tune.metre,
-      beatStrength: note.beatStrength,
-      phraseBoundaryBefore: note.phraseBoundaryBefore,
-    }
     const pinned = pins.get(i)
     const candidates = pinned ? [pinned] : (lattice[i] ?? [])
 
@@ -36,22 +34,37 @@ export function computeFingering(
       continue
     }
 
+    const baseContext = {
+      metre: tune.metre,
+      beatStrength: note.beatStrength,
+      phraseBoundaryBefore: note.phraseBoundaryBefore,
+    }
     const previous = prev
-    const nodes: Node[] = candidates.map((to) => {
+    const nodes: Node[] = []
+
+    for (const to of candidates) {
       if (previous === null) {
-        return { candidate: to, cost: cost(null, to, context), back: -1 }
+        const context: CostContext = { ...baseContext, sameDirectionRun: 0 }
+        nodes.push({ candidate: to, run: 1, cost: cost(null, to, context), back: -1 })
+        continue
       }
-      let best = Infinity
-      let bestBack = -1
+      const bestByRun = new Map<number, { cost: number; back: number }>()
       for (let j = 0; j < previous.length; j++) {
-        const total = previous[j].cost + cost(previous[j].candidate, to, context)
-        if (total < best) {
-          best = total
-          bestBack = j
+        const p = previous[j]
+        const incomingRun = note.phraseBoundaryBefore ? 0 : p.run
+        const context: CostContext = { ...baseContext, sameDirectionRun: incomingRun }
+        const sameDirection = p.candidate.direction === to.direction
+        const run = sameDirection ? Math.min(incomingRun + 1, RUN_CAP) : 1
+        const total = p.cost + cost(p.candidate, to, context)
+        const existing = bestByRun.get(run)
+        if (!existing || total < existing.cost) {
+          bestByRun.set(run, { cost: total, back: j })
         }
       }
-      return { candidate: to, cost: best, back: bestBack }
-    })
+      for (const [run, best] of bestByRun) {
+        nodes.push({ candidate: to, run, cost: best.cost, back: best.back })
+      }
+    }
     columns.push(nodes)
     prev = nodes
   }
