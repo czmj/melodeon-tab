@@ -10,6 +10,7 @@ export interface TabCell {
   underline: boolean
   playable: boolean
   rest: boolean
+  lowConfidence: boolean
 }
 
 export function renderTab(result: FingeringResult, instrument: Instrument): TabCell[] {
@@ -24,6 +25,7 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
         underline: false,
         playable: false,
         rest,
+        lowConfidence: false,
       }
     }
     const { row, position } = resolveCandidate(instrument, fingered.chosen)
@@ -36,6 +38,7 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
       underline: row === 1,
       playable: true,
       rest,
+      lowConfidence: fingered.confidence < 1,
     }
   })
 }

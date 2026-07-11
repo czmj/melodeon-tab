@@ -70,6 +70,7 @@ export function computeFingering(
   }
 
   const chosen: (Candidate | null)[] = new Array(tune.notes.length).fill(null)
+  let totalCost = 0
   let i = tune.notes.length - 1
   while (i >= 0) {
     const column = columns[i]
@@ -81,6 +82,7 @@ export function computeFingering(
     for (let j = 1; j < column.length; j++) {
       if (column[j].cost < column[k].cost) k = j
     }
+    totalCost += column[k].cost
     let ci = i
     let ni = k
     while (ci >= 0) {
@@ -108,5 +110,5 @@ export function computeFingering(
     }
   })
 
-  return { tune, notes }
+  return { tune, notes, totalCost }
 }

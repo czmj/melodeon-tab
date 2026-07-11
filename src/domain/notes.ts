@@ -57,6 +57,7 @@ export interface FingeredNote {
 export interface FingeringResult {
   tune: Tune
   notes: FingeredNote[]
+  totalCost: number
 }
 
 export interface CostContext {

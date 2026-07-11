@@ -5,7 +5,7 @@ import type { Candidate } from './domain/instrument.ts'
 import { renderStaffNotation } from './parse/renderStaff.ts'
 import { DG_STANDARD, candidatesForPitch } from './domain/instrument.ts'
 import { mapTuneCandidates } from './engine/candidates.ts'
-import { computeFingering } from './engine/fingering.ts'
+import { fingerWithConfidence } from './engine/confidence.ts'
 import { makeCostFn } from './engine/cost.ts'
 import { renderTab } from './render/tab.ts'
 import { midiToName } from './domain/pitch.ts'
@@ -144,7 +144,7 @@ function TuneView({
 
   const fingering = useMemo(() => {
     const pinMap = new Map(Object.entries(pins).map(([k, v]) => [Number(k), v]))
-    return computeFingering(tune, lattice, makeCostFn(DG_STANDARD), pinMap)
+    return fingerWithConfidence(tune, lattice, makeCostFn(DG_STANDARD), pinMap)
   }, [tune, lattice, pins])
 
   const tab = useMemo(() => renderTab(fingering, DG_STANDARD), [fingering])
@@ -158,7 +158,8 @@ function TuneView({
       <h3>
         Tab (click a note to override — <span style={{ color: 'red' }}>↑ push</span>,{' '}
         <span style={{ color: 'blue' }}>↓ pull</span>, <u>underline</u> = G row, ? =
-        unplayable, - = rest, <strong>bold</strong> = pinned)
+        unplayable, - = rest, <strong>bold</strong> = pinned,{' '}
+        <span style={{ backgroundColor: '#ffe08a' }}>highlight</span> = low-confidence)
       </h3>
       <pre>
         {tab.map((cell, i) => {
@@ -169,11 +170,13 @@ function TuneView({
               {barBreak ? '| ' : ''}
               <span
                 onClick={() => setSelected(i)}
+                title={cell.lowConfidence ? 'low confidence — close call' : undefined}
                 style={{
                   color: cell.colour ?? undefined,
                   textDecoration: cell.underline ? 'underline' : undefined,
                   cursor: 'pointer',
                   fontWeight: isPinned ? 'bold' : undefined,
+                  backgroundColor: cell.lowConfidence ? '#ffe08a' : undefined,
                   outline:
                     selected === i
                       ? '1px solid black'
