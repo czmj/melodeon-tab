@@ -29,8 +29,6 @@ const pull = (buttonId: string): Candidate => ({ buttonId, direction: 'pull' })
 
 describe('fingerWithConfidence', () => {
   it('marks a note low-confidence when its best alternative is an exact tie', () => {
-    // note 0: A or B, both push and equally good; note 1: P. Choosing A or B at
-    // note 0 yields the same total cost -> a coin flip (margin 0).
     const lattice: Candidate[][] = [[push('A'), push('B')], [push('P')]]
     const cost: CostFn = () => 0
     const result = fingerWithConfidence(fakeTune(2), lattice, cost)
@@ -40,8 +38,6 @@ describe('fingerWithConfidence', () => {
   })
 
   it('is confident about a note whose alternative is clearly worse', () => {
-    // note 0: A(push) or B(pull); B->P is a reversal costing 0.3, above the
-    // low-confidence threshold -> the choice is not flagged.
     const lattice: Candidate[][] = [[push('A'), pull('B')], [push('P')]]
     const cost: CostFn = (from, to) => (from && from.direction !== to.direction ? 0.3 : 0)
     const result = fingerWithConfidence(fakeTune(2), lattice, cost)

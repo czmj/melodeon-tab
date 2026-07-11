@@ -32,8 +32,6 @@ function fakeTune(noteCount: number): Tune {
 
 const push = (buttonId: string): Candidate => ({ buttonId, direction: 'push' })
 
-// col0: enter X for 0, Y for 5. col1: X->P costs 10, Y->P costs 0.
-// greedy takes X (0) then pays 10 = 10; the global optimum takes Y (5) then 0 = 5.
 const greedyTrap: Candidate[][] = [[push('X'), push('Y')], [push('P')]]
 const trapCost: CostFn = (from, to) => {
   if (from === null) return to.buttonId === 'Y' ? 5 : 0

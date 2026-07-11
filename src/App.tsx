@@ -23,15 +23,32 @@ type Pins = Record<number, Candidate>
 
 const STORAGE_KEY = 'melodeon-tab-state'
 
+function isKnownCandidate(value: unknown): value is Candidate {
+  if (typeof value !== 'object' || value === null) return false
+  const direction = (value as { direction?: unknown }).direction
+  const buttonId = (value as { buttonId?: unknown }).buttonId
+  return (
+    (direction === 'push' || direction === 'pull') &&
+    DG_STANDARD.treble.buttons.some((b) => b.id === buttonId)
+  )
+}
+
 function loadState(): { abc: string; pins: Pins } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      return { abc: parsed.abc ?? fixtures[0].abc, pins: parsed.pins ?? {} }
+      const abc = typeof parsed?.abc === 'string' ? parsed.abc : fixtures[0].abc
+      const pins: Pins = {}
+      if (parsed?.pins && typeof parsed.pins === 'object') {
+        for (const [key, value] of Object.entries(parsed.pins)) {
+          if (isKnownCandidate(value)) pins[Number(key)] = value
+        }
+      }
+      return { abc, pins }
     }
   } catch {
-    // ignore malformed or unavailable storage
+    return { abc: fixtures[0].abc, pins: {} }
   }
   return { abc: fixtures[0].abc, pins: {} }
 }
@@ -78,8 +95,8 @@ function OverridePanel({
   options: Candidate[]
   chosen: Candidate | null
   pinned: Candidate | undefined
-  onSetPin: (noteIndex: number, candidate: Candidate) => void
-  onClearPin: (noteIndex: number) => void
+  onSetPin: (candidate: Candidate) => void
+  onClearPin: () => void
   onClose: () => void
 }) {
   return (
@@ -93,12 +110,7 @@ function OverridePanel({
           const isPinned = pinned !== undefined && sameCandidate(c, pinned)
           const isAuto = chosen !== null && sameCandidate(c, chosen)
           return (
-            <button
-              key={ci}
-              type="button"
-              disabled={isPinned}
-              onClick={() => onSetPin(noteIndex, c)}
-            >
+            <button key={ci} type="button" disabled={isPinned} onClick={() => onSetPin(c)}>
               {pinLabel(c)}
               {isPinned ? ' ✓ pinned' : isAuto ? ' (auto)' : ''}
             </button>
@@ -106,7 +118,7 @@ function OverridePanel({
         })
       )}{' '}
       {pinned !== undefined && (
-        <button type="button" onClick={() => onClearPin(noteIndex)}>
+        <button type="button" onClick={onClearPin}>
           clear override
         </button>
       )}{' '}
@@ -125,8 +137,8 @@ function TuneView({
 }: {
   tune: Tune
   pins: Pins
-  onSetPin: (noteIndex: number, candidate: Candidate) => void
-  onClearPin: (noteIndex: number) => void
+  onSetPin: (startChar: number, candidate: Candidate) => void
+  onClearPin: (startChar: number) => void
 }) {
   const [selected, setSelected] = useState<number | null>(null)
 
@@ -143,11 +155,17 @@ function TuneView({
   const lattice = useMemo(() => mapTuneCandidates(tune, DG_STANDARD), [tune])
 
   const fingering = useMemo(() => {
-    const pinMap = new Map(Object.entries(pins).map(([k, v]) => [Number(k), v]))
+    const pinMap = new Map<number, Candidate>()
+    tune.notes.forEach((n) => {
+      const pin = pins[n.startChar]
+      if (pin) pinMap.set(n.index, pin)
+    })
     return fingerWithConfidence(tune, lattice, makeCostFn(DG_STANDARD), pinMap)
   }, [tune, lattice, pins])
 
   const tab = useMemo(() => renderTab(fingering, DG_STANDARD), [fingering])
+
+  const selectedNote = selected !== null ? tune.notes[selected] : null
 
   return (
     <div>
@@ -164,7 +182,7 @@ function TuneView({
       <pre>
         {tab.map((cell, i) => {
           const barBreak = i > 0 && tune.notes[i].bar !== tune.notes[i - 1].bar
-          const isPinned = pins[i] !== undefined
+          const isPinned = pins[tune.notes[i].startChar] !== undefined
           return (
             <Fragment key={i}>
               {barBreak ? '| ' : ''}
@@ -192,15 +210,15 @@ function TuneView({
           )
         })}
       </pre>
-      {selected !== null && (
+      {selected !== null && selectedNote && (
         <OverridePanel
           noteIndex={selected}
-          note={tune.notes[selected]}
+          note={selectedNote}
           options={lattice[selected] ?? []}
           chosen={fingering.notes[selected].chosen}
-          pinned={pins[selected]}
-          onSetPin={onSetPin}
-          onClearPin={onClearPin}
+          pinned={pins[selectedNote.startChar]}
+          onSetPin={(c) => onSetPin(selectedNote.startChar, c)}
+          onClearPin={() => onClearPin(selectedNote.startChar)}
           onClose={() => setSelected(null)}
         />
       )}
@@ -265,7 +283,7 @@ export function App() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ abc, pins }))
     } catch {
-      // ignore unavailable storage
+      return
     }
   }, [abc, pins])
 
@@ -282,13 +300,13 @@ export function App() {
     setPins({})
   }
 
-  const setPin = (noteIndex: number, candidate: Candidate) =>
-    setPins((p) => ({ ...p, [noteIndex]: candidate }))
+  const setPin = (startChar: number, candidate: Candidate) =>
+    setPins((p) => ({ ...p, [startChar]: candidate }))
 
-  const clearPin = (noteIndex: number) =>
+  const clearPin = (startChar: number) =>
     setPins((p) => {
       const next = { ...p }
-      delete next[noteIndex]
+      delete next[startChar]
       return next
     })
 
