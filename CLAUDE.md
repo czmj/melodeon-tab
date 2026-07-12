@@ -42,4 +42,4 @@ ADRs live in docs/adr/. **Read relevant ADRs before proposing architectural chan
 
 ## Current status
 
-MVP in progress — scope and next steps: @docs/roadmap.md
+MVP complete — post-MVP roadmap: @docs/roadmap.md
