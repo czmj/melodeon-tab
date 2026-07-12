@@ -63,20 +63,32 @@ export function placeTokens(
   anchors: StaffAnchor[],
   byStartChar: Map<number, NoteFingering>,
   offsetY: number,
+  above = true,
 ): PositionedToken[] {
   const rowOf = rowIndices(anchors)
 
-  const rowTop = new Map<number, number>()
+  const rowEdge = new Map<number, number>()
   anchors.forEach((anchor, i) => {
-    rowTop.set(rowOf[i], Math.min(rowTop.get(rowOf[i]) ?? Infinity, anchor.y))
+    const current = rowEdge.get(rowOf[i])
+    rowEdge.set(
+      rowOf[i],
+      above
+        ? Math.min(current ?? Infinity, anchor.y)
+        : Math.max(current ?? -Infinity, anchor.y),
+    )
   })
 
   const tokens: PositionedToken[] = []
   anchors.forEach((anchor, i) => {
     const fingering = byStartChar.get(anchor.startChar)
     if (!fingering || fingering.note.rest) return
-    const top = rowTop.get(rowOf[i]) ?? anchor.y
-    tokens.push({ startChar: anchor.startChar, x: anchor.x, y: top - offsetY, fingering })
+    const edge = rowEdge.get(rowOf[i]) ?? anchor.y
+    tokens.push({
+      startChar: anchor.startChar,
+      x: anchor.x,
+      y: above ? edge - offsetY : edge + offsetY,
+      fingering,
+    })
   })
   return tokens
 }
@@ -85,20 +97,32 @@ export function placeLabels(
   anchors: StaffAnchor[],
   byStartChar: Map<number, { text: string; pull: boolean }>,
   offsetY: number,
+  above = false,
 ): PositionedLabel[] {
   const rowOf = rowIndices(anchors)
 
-  const rowBottom = new Map<number, number>()
+  const rowEdge = new Map<number, number>()
   anchors.forEach((anchor, i) => {
-    rowBottom.set(rowOf[i], Math.max(rowBottom.get(rowOf[i]) ?? -Infinity, anchor.y))
+    const current = rowEdge.get(rowOf[i])
+    rowEdge.set(
+      rowOf[i],
+      above
+        ? Math.min(current ?? Infinity, anchor.y)
+        : Math.max(current ?? -Infinity, anchor.y),
+    )
   })
 
   const labels: PositionedLabel[] = []
   anchors.forEach((anchor, i) => {
     const entry = byStartChar.get(anchor.startChar)
     if (!entry) return
-    const bottom = rowBottom.get(rowOf[i]) ?? anchor.y
-    labels.push({ startChar: anchor.startChar, x: anchor.x, y: bottom + offsetY, ...entry })
+    const edge = rowEdge.get(rowOf[i]) ?? anchor.y
+    labels.push({
+      startChar: anchor.startChar,
+      x: anchor.x,
+      y: above ? edge - offsetY : edge + offsetY,
+      ...entry,
+    })
   })
   return labels
 }

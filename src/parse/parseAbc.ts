@@ -1,12 +1,16 @@
 import { parseOnly } from 'abcjs'
 import type { TuneObject } from 'abcjs'
 import { PPWN, basicBeatStrength, wholeNotesToTicks } from '../domain/notes.ts'
-import type { BarMarker, NoteEvent, Tune } from '../domain/notes.ts'
+import type { BarMarker, ChordChange, NoteEvent, Tune } from '../domain/notes.ts'
 import { parseChordSymbol } from '../domain/chord.ts'
+import type { Chord } from '../domain/chord.ts'
 
-function chordSymbolOf(item: { chord?: Array<{ name?: string }> }): string | undefined {
-  const name = (item.chord ?? []).map((c) => c.name).find((n) => n && parseChordSymbol(n))
-  return name ?? undefined
+function chordOf(item: { chord?: Array<{ name?: string }> }): { chord: Chord; symbol: string } | null {
+  for (const entry of item.chord ?? []) {
+    const parsed = entry.name ? parseChordSymbol(entry.name) : null
+    if (parsed && entry.name) return { chord: parsed, symbol: entry.name }
+  }
+  return null
 }
 
 function keyLabel(tune: TuneObject): string {
@@ -51,6 +55,7 @@ export function parseAbc(abc: string): Tune[] {
     const metre = metreTuple(tune)
     const notes: NoteEvent[] = []
     const bars: BarMarker[] = []
+    const chordChanges: ChordChange[] = []
     let bar = 1
     let seenNoteInBar = false
     let startTicks = 0
@@ -64,6 +69,18 @@ export function parseAbc(abc: string): Tune[] {
 
     for (const item of items) {
       if (item.el_type === 'note') {
+        const parsedChord = chordOf(item)
+        if (parsedChord) {
+          const last = chordChanges[chordChanges.length - 1]
+          if (!last || last.symbol !== parsedChord.symbol) {
+            chordChanges.push({
+              startChar: item.startChar,
+              startTicks,
+              chord: parsedChord.chord,
+              symbol: parsedChord.symbol,
+            })
+          }
+        }
         const rest = item.rest !== undefined
         const pitches: Array<{ name?: string; endTie?: unknown }> = item.pitches ?? []
         const durationTicks = wholeNotesToTicks(item.duration)
@@ -89,7 +106,6 @@ export function parseAbc(abc: string): Tune[] {
           startChar: item.startChar,
           rest,
           collapsedChord: !rest && pitches.length > 1 ? true : undefined,
-          chordSymbol: chordSymbolOf(item),
           beatStrength: basicBeatStrength(startTicks - barStartTicks, metre),
           phraseBoundaryBefore: pendingBoundary,
         })
@@ -117,6 +133,7 @@ export function parseAbc(abc: string): Tune[] {
       metre,
       notes,
       bars,
+      chordChanges,
     }
   })
 }

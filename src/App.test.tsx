@@ -52,18 +52,31 @@ describe('isKnownCandidate', () => {
 
 describe('loadState', () => {
   it('falls back to the default tune with no overrides when nothing is stored', () => {
-    expect(loadState()).toEqual({ abc: moonAbc, pins: {} })
+    expect(loadState()).toEqual({ abc: moonAbc, pins: {}, displayMode: 'chordBass' })
   })
 
-  it('round-trips a previously saved tune and its pins', () => {
+  it('round-trips a previously saved tune, its pins and display mode', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ abc: 'X:1\nK:C\nC|', pins: { 5: { buttonId: 'd3', direction: 'push' } } }),
+      JSON.stringify({
+        abc: 'X:1\nK:C\nC|',
+        pins: { 5: { buttonId: 'd3', direction: 'push' } },
+        displayMode: 'chords',
+      }),
     )
     expect(loadState()).toEqual({
       abc: 'X:1\nK:C\nC|',
       pins: { 5: { buttonId: 'd3', direction: 'push' } },
+      displayMode: 'chords',
     })
+  })
+
+  it('defaults the display mode when the stored value is missing or invalid', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ abc: 'X:1\nK:C\nC|', pins: {}, displayMode: 'bogus' }),
+    )
+    expect(loadState().displayMode).toBe('chordBass')
   })
 
   it('drops a stale pin referencing a button no longer on the instrument, without crashing', () => {
@@ -80,12 +93,13 @@ describe('loadState', () => {
     expect(loadState()).toEqual({
       abc: 'X:1\nK:C\nC|',
       pins: { 5: { buttonId: 'd3', direction: 'push' } },
+      displayMode: 'chordBass',
     })
   })
 
   it('falls back to the default state on unparseable JSON, without throwing', () => {
     localStorage.setItem(STORAGE_KEY, '{not json')
-    expect(loadState()).toEqual({ abc: moonAbc, pins: {} })
+    expect(loadState()).toEqual({ abc: moonAbc, pins: {}, displayMode: 'chordBass' })
   })
 })
 

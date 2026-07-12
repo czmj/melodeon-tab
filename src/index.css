@@ -128,3 +128,6 @@
     @apply font-sans;
     }
 }
+.abcjs-chord {
+  display: none;
+}

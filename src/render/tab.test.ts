@@ -77,6 +77,7 @@ describe('renderTab', () => {
       key: 'C',
       metre: [4, 4],
       bars: [],
+      chordChanges: [],
       notes: [
         {
           index: 0,

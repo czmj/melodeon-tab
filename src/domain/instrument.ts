@@ -41,8 +41,8 @@ export function candidatesForPitch(instrument: Instrument, midi: Pitch): Candida
   return result
 }
 
-export function allButtons(instrument: Instrument): Button[] {
-  return [...instrument.treble.buttons, ...instrument.bass.buttons]
+export function sameCandidate(a: Candidate, b: Candidate): boolean {
+  return a.buttonId === b.buttonId && a.direction === b.direction
 }
 
 export function buttonsInRole(instrument: Instrument, role: 'bass' | 'chord'): Button[] {
@@ -61,7 +61,9 @@ export function resolveCandidate(
   pitches: Pitch[]
   role?: 'bass' | 'chord'
 } {
-  const button = allButtons(instrument).find((b) => b.id === candidate.buttonId)
+  const button =
+    instrument.treble.buttons.find((b) => b.id === candidate.buttonId) ??
+    instrument.bass.buttons.find((b) => b.id === candidate.buttonId)
   if (!button) throw new Error(`unknown button: ${candidate.buttonId}`)
   const pitches = pitchesInDirection(button, candidate.direction)
   return {

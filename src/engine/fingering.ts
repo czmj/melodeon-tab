@@ -1,6 +1,8 @@
 import type { Candidate } from '../domain/instrument.ts'
+import { sameCandidate } from '../domain/instrument.ts'
 import type { CostContext, CostFn, FingeredNote, FingeringResult, Tune } from '../domain/notes.ts'
 import { PPWN } from '../domain/notes.ts'
+import type { NoteHarmony } from './harmony.ts'
 
 const TICKS_PER_BEAT = PPWN / 4
 const RUN_CAP_TICKS = 12 * TICKS_PER_BEAT
@@ -12,15 +14,12 @@ interface Node {
   back: number
 }
 
-function sameCandidate(a: Candidate, b: Candidate): boolean {
-  return a.buttonId === b.buttonId && a.direction === b.direction
-}
-
 export function computeFingering(
   tune: Tune,
   lattice: Candidate[][],
   cost: CostFn,
   pins: Map<number, Candidate> = new Map(),
+  harmony?: NoteHarmony[],
 ): FingeringResult {
   const columns: (Node[] | null)[] = []
   let prev: Node[] | null = null
@@ -36,10 +35,13 @@ export function computeFingering(
       continue
     }
 
+    const h = harmony?.[i]
     const baseContext = {
       metre: tune.metre,
       beatStrength: note.beatStrength,
       phraseBoundaryBefore: note.phraseBoundaryBefore,
+      preferredDirection: h?.preferredDirection ?? undefined,
+      harmonySource: h?.source ?? undefined,
     }
     const previous = prev
     const nodes: Node[] = []

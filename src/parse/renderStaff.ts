@@ -7,7 +7,7 @@ export interface StaffAnchor {
 }
 
 const SCREEN_HORIZONTAL_PADDING = 30;
-const LAYOUT_DIRECTIVES = "%%stretchlast 1\n%%staffsep 90\n%%musicspace 30\n";
+const LAYOUT_DIRECTIVES = "%%stretchlast 1\n%%staffsep 122\n%%musicspace 32\n";
 
 export function renderStaffNotation(
   target: HTMLElement,

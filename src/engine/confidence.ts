@@ -1,20 +1,19 @@
 import type { Candidate } from '../domain/instrument.ts'
+import { sameCandidate } from '../domain/instrument.ts'
 import type { CostFn, FingeringResult, Tune } from '../domain/notes.ts'
 import { computeFingering } from './fingering.ts'
+import type { NoteHarmony } from './harmony.ts'
 
 const LOW_CONFIDENCE_MARGIN = 0.1
-
-function sameCandidate(a: Candidate, b: Candidate): boolean {
-  return a.buttonId === b.buttonId && a.direction === b.direction
-}
 
 export function fingerWithConfidence(
   tune: Tune,
   lattice: Candidate[][],
   cost: CostFn,
   pins: Map<number, Candidate> = new Map(),
+  harmony?: NoteHarmony[],
 ): FingeringResult {
-  const base = computeFingering(tune, lattice, cost, pins)
+  const base = computeFingering(tune, lattice, cost, pins, harmony)
 
   for (const fingered of base.notes) {
     const i = fingered.noteIndex
@@ -34,7 +33,10 @@ export function fingerWithConfidence(
     for (const alternative of alternatives) {
       const forced = new Map(pins)
       forced.set(i, alternative)
-      bestAlternative = Math.min(bestAlternative, computeFingering(tune, lattice, cost, forced).totalCost)
+      bestAlternative = Math.min(
+        bestAlternative,
+        computeFingering(tune, lattice, cost, forced, harmony).totalCost,
+      )
     }
     const margin = bestAlternative - base.totalCost
     fingered.costMargin = margin

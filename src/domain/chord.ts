@@ -22,9 +22,11 @@ function pitchClassSet(pitches: Iterable<number>): Set<number> {
   return set
 }
 
+const CHORD_SUFFIX = /^(?:maj|min|dim|aug|sus|add|m|[0-9]|°|\+|-|#|b)*(?:\/[A-G][#b]?)?$/
+
 export function parseChordSymbol(symbol: string): Chord | null {
   const match = /^([A-G])([#b]?)(.*)$/.exec(symbol.trim())
-  if (!match) return null
+  if (!match || !CHORD_SUFFIX.test(match[3])) return null
   let root = ROOT_PC[match[1]]
   if (match[2] === '#') root = pitchClass(root + 1)
   else if (match[2] === 'b') root = pitchClass(root - 1)
@@ -64,12 +66,22 @@ export function analyseMatch(pitches: Iterable<number>, target: Chord): ChordMat
   }
 }
 
+export function triadTones(chord: Chord): Set<number> {
+  return new Set([
+    pitchClass(chord.root),
+    pitchClass(chord.root + (chord.quality === 'maj' ? 4 : 3)),
+    pitchClass(chord.root + 7),
+  ])
+}
+
 export function matchScore(pitches: Iterable<number>, target: Chord): number {
   const m = analyseMatch(pitches, target)
-  return (
+  const tones = triadTones(target)
+  let score =
     (m.rootPresent ? 3 : 0) +
     (m.thirdPresent ? 2 : 0) +
     (m.fifthPresent ? 1 : 0) +
     (m.clashingThird ? -2 : 0)
-  )
+  for (const pc of pitchClassSet(pitches)) if (!tones.has(pc)) score -= 1
+  return score
 }

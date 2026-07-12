@@ -42,6 +42,18 @@ describe('parseChordSymbol', () => {
     expect(parseChordSymbol('H')).toBeNull()
     expect(parseChordSymbol('')).toBeNull()
   })
+
+  it('rejects text annotations that merely start with a note letter', () => {
+    for (const junk of ['Fine', 'D.C.', 'Coda', 'Andante', 'Gently', 'Bright', 'D.S.', 'Faster']) {
+      expect(parseChordSymbol(junk)).toBeNull()
+    }
+  })
+
+  it('still accepts the full range of real chord suffixes', () => {
+    for (const ok of ['C', 'Am', 'Gmaj7', 'F#m7', 'Bbsus4', 'Aadd9', 'Edim', 'Caug', 'D/F#', 'A7']) {
+      expect(parseChordSymbol(ok)).not.toBeNull()
+    }
+  })
 })
 
 describe('deriveChords', () => {

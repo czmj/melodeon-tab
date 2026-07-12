@@ -1,17 +1,11 @@
-import {
-  buttonsInRole,
-  pitchesInDirection,
-} from '../domain/instrument.ts'
+import { buttonsInRole, pitchesInDirection } from '../domain/instrument.ts'
 import type { Button, Candidate, Direction, Instrument } from '../domain/instrument.ts'
-import {
-  chordLabel,
-  deriveChords,
-  matchScore,
-  parseChordSymbol,
-} from '../domain/chord.ts'
+import { chordLabel, deriveChords } from '../domain/chord.ts'
 import type { Chord } from '../domain/chord.ts'
-import { pitchClass, pitchClassName } from '../domain/pitch.ts'
+import { pitchClassName } from '../domain/pitch.ts'
 import type { FingeringResult, Tune } from '../domain/notes.ts'
+import { analyseHarmony, bestButtonInDirection, preferredDirection } from './harmony.ts'
+import type { NoteHarmony } from './harmony.ts'
 
 export interface BassSuggestion {
   noteIndex: number
@@ -23,94 +17,6 @@ export interface BassSuggestion {
   chordLabel: string | null
 }
 
-function triadTones(chord: Chord): Set<number> {
-  return new Set([
-    pitchClass(chord.root),
-    pitchClass(chord.root + (chord.quality === 'maj' ? 4 : 3)),
-    pitchClass(chord.root + 7),
-  ])
-}
-
-function sameChord(a: Chord, b: Chord): boolean {
-  return a.root === b.root && a.quality === b.quality
-}
-
-function playableChords(instrument: Instrument): Chord[] {
-  const chords: Chord[] = []
-  for (const button of buttonsInRole(instrument, 'chord')) {
-    for (const direction of ['push', 'pull'] as const) {
-      for (const chord of deriveChords(pitchesInDirection(button, direction))) {
-        if (!chords.some((c) => sameChord(c, chord))) chords.push(chord)
-      }
-    }
-  }
-  return chords
-}
-
-function barPitchWeights(tune: Tune, bar: number): Map<number, number> {
-  const weights = new Map<number, number>()
-  for (const note of tune.notes) {
-    if (note.bar !== bar || note.rest || note.pitch <= 0) continue
-    const pc = pitchClass(note.pitch)
-    weights.set(pc, (weights.get(pc) ?? 0) + note.durationTicks)
-  }
-  return weights
-}
-
-function fallbackTarget(weights: Map<number, number>, candidates: Chord[]): Chord | null {
-  if (weights.size === 0) return null
-  let best: Chord | null = null
-  let bestScore = 0
-  for (const chord of candidates) {
-    const tones = triadTones(chord)
-    let score = 0
-    for (const [pc, weight] of weights) if (tones.has(pc)) score += weight
-    if (score > bestScore) {
-      bestScore = score
-      best = chord
-    }
-  }
-  return best
-}
-
-function computeTargets(tune: Tune, instrument: Instrument): (Chord | null)[] {
-  const candidates = playableChords(instrument)
-  const filled: (Chord | null)[] = []
-  let carried: Chord | null = null
-  for (const note of tune.notes) {
-    if (note.chordSymbol) {
-      const parsed = parseChordSymbol(note.chordSymbol)
-      if (parsed) carried = parsed
-    }
-    filled.push(carried)
-  }
-  const barFallback = new Map<number, Chord | null>()
-  return tune.notes.map((note, i) => {
-    if (filled[i]) return filled[i]
-    if (!barFallback.has(note.bar)) {
-      barFallback.set(note.bar, fallbackTarget(barPitchWeights(tune, note.bar), candidates))
-    }
-    return barFallback.get(note.bar) ?? null
-  })
-}
-
-function bestButton(
-  buttons: Button[],
-  direction: Direction,
-  target: Chord,
-): { button: Button; candidate: Candidate } | null {
-  let best: { button: Button; candidate: Candidate } | null = null
-  let bestScore = 0
-  for (const button of buttons) {
-    const score = matchScore(pitchesInDirection(button, direction), target)
-    if (score > bestScore) {
-      bestScore = score
-      best = { button, candidate: { buttonId: button.id, direction } }
-    }
-  }
-  return best
-}
-
 function bassLabelFor(button: Button, direction: Direction): string {
   return pitchClassName(pitchesInDirection(button, direction)[0])
 }
@@ -120,31 +26,167 @@ function chordLabelFor(button: Button, direction: Direction): string | null {
   return derived.length > 0 ? chordLabel(derived[0]) : null
 }
 
+const empty = (
+  i: number,
+  direction: Direction | null,
+  target: Chord | null,
+): BassSuggestion => ({
+  noteIndex: i,
+  direction,
+  target,
+  bass: null,
+  chord: null,
+  bassLabel: null,
+  chordLabel: null,
+})
+
 export function suggestAccompaniment(
   tune: Tune,
   fingering: FingeringResult,
   instrument: Instrument,
+  harmony: NoteHarmony[] = analyseHarmony(tune, instrument),
 ): BassSuggestion[] {
-  const targets = computeTargets(tune, instrument)
   const bassButtons = buttonsInRole(instrument, 'bass')
   const chordButtons = buttonsInRole(instrument, 'chord')
 
   return tune.notes.map((_, i) => {
     const direction = fingering.notes[i]?.chosen?.direction ?? null
-    const target = targets[i]
-    if (!direction || !target) {
-      return { noteIndex: i, direction, target, bass: null, chord: null, bassLabel: null, chordLabel: null }
-    }
-    const bass = bestButton(bassButtons, direction, target)
-    const chord = bestButton(chordButtons, direction, target)
+    const { target, preferredDirection } = harmony[i]
+    const offSpanDirection =
+      preferredDirection !== null && direction !== null && direction !== preferredDirection
+    if (!direction || !target || offSpanDirection) return empty(i, direction, target)
+
+    const bass = bestButtonInDirection(bassButtons, direction, target)
+    const chord = bestButtonInDirection(chordButtons, direction, target)
     return {
       noteIndex: i,
       direction,
       target,
-      bass: bass?.candidate ?? null,
-      chord: chord?.candidate ?? null,
+      bass: bass ? { buttonId: bass.button.id, direction } : null,
+      chord: chord ? { buttonId: chord.button.id, direction } : null,
       bassLabel: bass ? bassLabelFor(bass.button, direction) : null,
       chordLabel: chord ? chordLabelFor(chord.button, direction) : null,
     }
   })
+}
+
+export interface AccToken {
+  startChar: number
+  text: string
+  pull: boolean
+}
+
+export interface AccompanimentDisplay {
+  chordNames: AccToken[]
+  bass: AccToken[]
+  chord: AccToken[]
+}
+
+interface DisplayPoint {
+  startChar: number
+  startTicks: number
+  name: string
+  bassText: string | null
+  chordText: string | null
+  pull: boolean
+  barStart: boolean
+}
+
+function soundingDirection(
+  tune: Tune,
+  fingering: FingeringResult,
+  ticks: number,
+): Direction | null {
+  for (let i = 0; i < tune.notes.length; i++) {
+    const note = tune.notes[i]
+    if (note.startTicks <= ticks && ticks < note.startTicks + note.durationTicks) {
+      return fingering.notes[i]?.chosen?.direction ?? null
+    }
+  }
+  return null
+}
+
+export function accompanimentDisplay(
+  tune: Tune,
+  fingering: FingeringResult,
+  instrument: Instrument,
+  harmony: NoteHarmony[] = analyseHarmony(tune, instrument),
+): AccompanimentDisplay {
+  const suggestions = suggestAccompaniment(tune, fingering, instrument, harmony)
+  const bassButtons = buttonsInRole(instrument, 'bass')
+  const chordButtons = buttonsInRole(instrument, 'chord')
+  const noteStartChars = new Set(tune.notes.map((n) => n.startChar))
+  const points: DisplayPoint[] = []
+
+  tune.notes.forEach((note, i) => {
+    const { target, label } = harmony[i]
+    if (!target || !label) return
+    const s = suggestions[i]
+    points.push({
+      startChar: note.startChar,
+      startTicks: note.startTicks,
+      name: label,
+      bassText: s.bassLabel,
+      chordText: s.chordLabel ? s.chordLabel.toLowerCase() : null,
+      pull: s.direction === 'pull',
+      barStart: i === 0 || tune.notes[i - 1].bar !== note.bar,
+    })
+  })
+
+  for (const change of tune.chordChanges) {
+    if (noteStartChars.has(change.startChar)) continue
+    const direction = soundingDirection(tune, fingering, change.startTicks)
+    const preferred = preferredDirection(instrument, change.chord)
+    const silent = direction === null || (preferred !== null && direction !== preferred)
+    let bassText: string | null = null
+    let chordText: string | null = null
+    if (!silent && direction) {
+      const bestBass = bestButtonInDirection(bassButtons, direction, change.chord)
+      const bestChord = bestButtonInDirection(chordButtons, direction, change.chord)
+      bassText = bestBass ? bassLabelFor(bestBass.button, direction) : null
+      const label = bestChord ? chordLabelFor(bestChord.button, direction) : null
+      chordText = label ? label.toLowerCase() : null
+    }
+    points.push({
+      startChar: change.startChar,
+      startTicks: change.startTicks,
+      name: change.symbol,
+      bassText,
+      chordText,
+      pull: direction === 'pull',
+      barStart: false,
+    })
+  }
+
+  points.sort((a, b) => a.startTicks - b.startTicks)
+
+  const chordNames: AccToken[] = []
+  const bass: AccToken[] = []
+  const chord: AccToken[] = []
+  let lastName: string | undefined
+  let lastBass: string | undefined
+  let lastChord: string | undefined
+
+  for (const point of points) {
+    if (point.name !== lastName || point.barStart) {
+      chordNames.push({ startChar: point.startChar, text: point.name, pull: false })
+      lastName = point.name
+    }
+    if (point.bassText !== null) {
+      const key = `${point.bassText}|${point.pull}`
+      if (key !== lastBass || point.barStart) {
+        bass.push({ startChar: point.startChar, text: point.bassText, pull: point.pull })
+        lastBass = key
+      }
+    }
+    if (point.chordText !== null) {
+      const key = `${point.chordText}|${point.pull}`
+      if (key !== lastChord || point.barStart) {
+        chord.push({ startChar: point.startChar, text: point.chordText, pull: point.pull })
+        lastChord = key
+      }
+    }
+  }
+
+  return { chordNames, bass, chord }
 }

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { parseAbc } from './parseAbc.ts'
+import { wholeNotesToTicks } from '../domain/notes.ts'
+import { chordLabel } from '../domain/chord.ts'
 import moonAbc from '../fixtures/moon-and-seven-stars.abc?raw'
 import jiggeryAbc from '../fixtures/jiggery-pokerwork.abc?raw'
 import oranAbc from '../fixtures/oran-na-cloiche.abc?raw'
 import tansysAbc from '../fixtures/tansys-golowan.abc?raw'
 import christmasAbc from '../fixtures/a-christmas.abc?raw'
+import jerichoAbc from '../fixtures/jericho.abc?raw'
 
 describe('parseAbc', () => {
   it('extracts header, notes and sounding pitch from a D major jig', () => {
@@ -73,20 +76,39 @@ describe('parseAbc', () => {
     expect(tune.notes.every((n) => n.rest || (n.pitch > 0 && Number.isInteger(n.pitch)))).toBe(true)
   })
 
-  it('captures chord symbols as an accompaniment hint on the note they precede', () => {
+  it('captures chord symbols as a harmony track at their positions', () => {
     const [tune] = parseAbc(oranAbc)
-    const symbols = tune.notes.map((n) => n.chordSymbol).filter((s): s is string => s !== undefined)
-    expect(new Set(symbols)).toEqual(new Set(['Am', 'C', 'Dm', 'Em', 'G']))
-    const firstAm = tune.notes.find((n) => n.chordSymbol)
-    expect(firstAm?.chordSymbol).toBe('Am')
+    const labels = new Set(tune.chordChanges.map((c) => chordLabel(c.chord)))
+    expect(labels).toEqual(new Set(['Am', 'C', 'Dm', 'Em', 'G']))
+    expect(chordLabel(tune.chordChanges[0].chord)).toBe('Am')
+  })
+
+  it('records a chord change on a tie continuation at its own position, not the held note', () => {
+    const [tune] = parseAbc('X:1\nL:1/8\nK:Dm\n"Dm"A3- "A7"A2 AA|')
+    const held = tune.notes[0]
+    expect(held.durationTicks).toBe(wholeNotesToTicks(5 / 8))
+    const a7 = tune.chordChanges.find((c) => c.chord.root === 9 && c.chord.quality === 'maj')
+    expect(a7).toBeDefined()
+    // A3- runs 3/8 before the A7 lands, so the change sits mid-held-note, not at its start.
+    expect(a7?.startTicks).toBe(wholeNotesToTicks(3 / 8))
+  })
+
+  it('reflects an "A7" chord change that lands on a tie in Jericho', () => {
+    const [tune] = parseAbc(jerichoAbc)
+    // "Dm"A A3- "A7"A2 AA — the A7 sits on the tie continuation, a score position with no note
+    // of its own. It must still appear in the track, at a startChar no note occupies.
+    const noteChars = new Set(tune.notes.map((n) => n.startChar))
+    const offNoteA7 = tune.chordChanges.find(
+      (c) => c.chord.root === 9 && c.chord.quality === 'maj' && !noteChars.has(c.startChar),
+    )
+    expect(offNoteA7).toBeDefined()
   })
 
   it('drops a text annotation that is not a real chord symbol', () => {
     // a-christmas.abc has a "to" annotation (abcjs tags it position:"default", like a chord);
-    // parseChordSymbol rejects it, so it must not land in the model as a chord.
+    // parseChordSymbol rejects it, so it must not land in the harmony track.
     const [tune] = parseAbc(christmasAbc)
-    expect(tune.notes.some((n) => n.chordSymbol === 'to')).toBe(false)
-    expect(tune.notes.every((n) => n.chordSymbol === undefined)).toBe(true)
+    expect(tune.chordChanges).toHaveLength(0)
   })
 
   it('known gap: 5/4 has no 3+2/2+3 grouping, so every main beat scores the same', () => {

@@ -8,6 +8,8 @@ export interface CostWeights {
   rowChange: number
   airPenaltyRate: number
   airComfortBeats: number
+  directionBiasWritten: number
+  directionBiasFallback: number
 }
 
 export const DEFAULT_WEIGHTS: CostWeights = {
@@ -16,12 +18,20 @@ export const DEFAULT_WEIGHTS: CostWeights = {
   rowChange: 0.5,
   airPenaltyRate: 0.4,
   airComfortBeats: 8,
+  directionBiasWritten: 3,
+  directionBiasFallback: 0.6,
 }
 
 export function makeCostFn(instrument: Instrument, weights: CostWeights = DEFAULT_WEIGHTS): CostFn {
   return (from, to, context) => {
-    if (from === null) return 0
     let cost = 0
+    if (context.preferredDirection && to.direction !== context.preferredDirection) {
+      cost +=
+        context.harmonySource === 'written'
+          ? weights.directionBiasWritten
+          : weights.directionBiasFallback
+    }
+    if (from === null) return cost
     if (from.direction !== to.direction) {
       cost += weights.reversalWeak - (weights.reversalWeak - weights.reversalStrong) * context.beatStrength
     } else {

@@ -5,6 +5,7 @@ import { placeLabels, placeTokens } from './render/staffLayout.ts'
 import type { NoteFingering } from './render/staffLayout.ts'
 import type { Candidate } from './domain/instrument.ts'
 import { DG_STANDARD } from './domain/instrument.ts'
+import type { DisplayMode } from './App.tsx'
 import { midiToName } from './domain/pitch.ts'
 import { candidateLabel } from './render/tab.ts'
 import { Button } from '@/components/ui/button'
@@ -20,9 +21,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const TOKEN_OFFSET_Y = 34
-const BASS_OFFSET_Y = 44
-const CHORD_OFFSET_Y = 64
+const TOKEN_OFFSET_Y = 42
+const BASS_OFFSET_Y = 72
+const CHORD_OFFSET_Y = 92
+const CHORDNAME_OFFSET_Y = 72
 
 function candidateKey(c: Candidate): string {
   return `${c.buttonId}-${c.direction}`
@@ -31,8 +33,10 @@ function candidateKey(c: Candidate): string {
 export function StaffTab({
   abc,
   byStartChar,
+  displayMode,
   bassByStartChar,
   chordByStartChar,
+  chordNamesByStartChar,
   onSelect,
   selectedStartChar,
   pinnedStartChars,
@@ -42,8 +46,10 @@ export function StaffTab({
 }: {
   abc: string
   byStartChar: Map<number, NoteFingering>
+  displayMode: DisplayMode
   bassByStartChar: Map<number, { text: string; pull: boolean }>
   chordByStartChar: Map<number, { text: string; pull: boolean }>
+  chordNamesByStartChar: Map<number, { text: string; pull: boolean }>
   onSelect: (startChar: number | null) => void
   selectedStartChar: number | null
   pinnedStartChars: Set<number>
@@ -66,13 +72,27 @@ export function StaffTab({
     return () => observer.disconnect()
   }, [abc])
 
-  const tokens = placeTokens(anchors, byStartChar, TOKEN_OFFSET_Y)
-  const bassLabels = placeLabels(anchors, bassByStartChar, BASS_OFFSET_Y)
-  const chordLabels = placeLabels(anchors, chordByStartChar, CHORD_OFFSET_Y)
+  const tokens = placeTokens(anchors, byStartChar, TOKEN_OFFSET_Y, false)
+  const showBass = displayMode === 'chordBass'
+  const bassLabels = showBass ? placeLabels(anchors, bassByStartChar, BASS_OFFSET_Y) : []
+  const chordLabels = showBass ? placeLabels(anchors, chordByStartChar, CHORD_OFFSET_Y) : []
+  const chordNameLabels =
+    displayMode === 'chords'
+      ? placeLabels(anchors, chordNamesByStartChar, CHORDNAME_OFFSET_Y)
+      : []
 
   return (
-    <div ref={wrapperRef} style={{ position: 'relative' }}>
+    <div ref={wrapperRef} style={{ position: 'relative', paddingBottom: CHORD_OFFSET_Y + 24 }}>
       <div ref={staffRef} />
+      {chordNameLabels.map((label) => (
+        <span
+          key={`chordname-${label.startChar}`}
+          className="absolute -translate-x-1/2 inline-flex h-5 items-center justify-center px-1 text-xs font-medium"
+          style={{ left: label.x, top: label.y }}
+        >
+          {label.text}
+        </span>
+      ))}
       {bassLabels.map((label) => (
         <span
           key={`bass-${label.startChar}`}

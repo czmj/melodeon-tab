@@ -41,7 +41,7 @@ const cand = (buttonId: string): Candidate => ({ buttonId, direction: 'push' })
 
 function input(): FingeringInput {
   const notes = [note(0, 10), note(1, 20, true), note(2, 30)]
-  const tune: Tune = { title: 't', key: 'C', metre: [4, 4], notes, bars: [] }
+  const tune: Tune = { title: 't', key: 'C', metre: [4, 4], notes, bars: [], chordChanges: [] }
   const fingered: FingeredNote[] = notes.map((n) => ({
     noteIndex: n.index,
     chosen: n.rest ? null : cand('d3'),
@@ -118,6 +118,24 @@ describe('placeLabels', () => {
     expect(labels).toEqual([
       { startChar: 10, x: 5, y: 120, text: 'D', pull: false },
       { startChar: 30, x: 2, y: 230, text: 'A', pull: true },
+    ])
+  })
+
+  it('places labels above each row top when above is set', () => {
+    const anchors = [
+      { startChar: 10, x: 5, y: 100 },
+      { startChar: 20, x: 30, y: 90 },
+      { startChar: 30, x: 2, y: 200 },
+      { startChar: 40, x: 40, y: 210 },
+    ]
+    const map = new Map([
+      [10, { text: 'D', pull: false }],
+      [30, { text: 'A', pull: true }],
+    ])
+    const labels = placeLabels(anchors, map, 20, true)
+    expect(labels).toEqual([
+      { startChar: 10, x: 5, y: 70, text: 'D', pull: false },
+      { startChar: 30, x: 2, y: 180, text: 'A', pull: true },
     ])
   })
 })

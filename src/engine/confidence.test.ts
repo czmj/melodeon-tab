@@ -9,6 +9,7 @@ function fakeTune(noteCount: number): Tune {
     key: 'C',
     metre: [4, 4],
     bars: [],
+    chordChanges: [],
     notes: Array.from({ length: noteCount }, (_, i) => ({
       index: i,
       pitch: 60,

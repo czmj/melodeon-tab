@@ -1,4 +1,5 @@
-import type { Candidate } from './instrument'
+import type { Candidate, Direction } from './instrument'
+import type { Chord } from './chord'
 
 export const PPWN = 720
 
@@ -26,9 +27,15 @@ export interface NoteEvent {
   startChar: number
   rest: boolean
   collapsedChord?: boolean
-  chordSymbol?: string
   beatStrength: number
   phraseBoundaryBefore: boolean
+}
+
+export interface ChordChange {
+  startChar: number
+  startTicks: number
+  chord: Chord
+  symbol: string
 }
 
 export interface BarMarker {
@@ -44,6 +51,7 @@ export interface Tune {
   metre: [number, number]
   notes: NoteEvent[]
   bars: BarMarker[]
+  chordChanges: ChordChange[]
 }
 
 export interface FingeredNote {
@@ -66,6 +74,8 @@ export interface CostContext {
   beatStrength: number
   phraseBoundaryBefore: boolean
   sameDirectionBeats?: number
+  preferredDirection?: Direction
+  harmonySource?: 'written' | 'fallback'
 }
 
 export type CostFn = (from: Candidate | null, to: Candidate, context: CostContext) => number
