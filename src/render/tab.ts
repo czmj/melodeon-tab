@@ -1,6 +1,15 @@
 import { resolveCandidate } from '../domain/instrument.ts'
-import type { Instrument } from '../domain/instrument.ts'
+import type { Candidate, Direction, Instrument } from '../domain/instrument.ts'
 import type { FingeringResult } from '../domain/notes.ts'
+
+export function directionArrow(direction: Direction): string {
+  return direction === 'push' ? '↑' : '↓'
+}
+
+export function candidateLabel(instrument: Instrument, candidate: Candidate): string {
+  const { row, position } = resolveCandidate(instrument, candidate)
+  return `Row ${row + 1}, button ${position}, ${candidate.direction}`
+}
 
 export interface TabCell {
   noteIndex: number
