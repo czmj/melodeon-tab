@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { parseAbc } from './parseAbc.ts'
 import moonAbc from '../fixtures/moon-and-seven-stars.abc?raw'
 import jiggeryAbc from '../fixtures/jiggery-pokerwork.abc?raw'
+import oranAbc from '../fixtures/oran-na-cloiche.abc?raw'
+import tansysAbc from '../fixtures/tansys-golowan.abc?raw'
 
 describe('parseAbc', () => {
   it('extracts header, notes and sounding pitch from a D major jig', () => {
@@ -38,11 +40,19 @@ describe('parseAbc', () => {
     expect(a.pitch).toBe(69)
   })
 
-  it('flattens a bracket chord to its highest pitch and flags it', () => {
+  it('recognises a phrase boundary after a tie whose combined duration crosses the long-note threshold', () => {
+    // Each fragment (A2) is a quaver on its own — too short to be a phrase boundary — but
+    // tied together they total a half note, which should register as one.
+    const [tune] = parseAbc('X:1\nL:1/8\nM:4/4\nK:C\nA2- A2 c4 |')
+    expect(tune.notes[0].durationTicks).toBe(360)
+    expect(tune.notes[1].phraseBoundaryBefore).toBe(true)
+  })
+
+  it('collapses a bracket chord to its highest pitch and flags it', () => {
     const [tune] = parseAbc('X:1\nL:1/8\nK:C\n[CEG] D |')
     expect(tune.notes[0].pitch).toBe(67)
-    expect(tune.notes[0].flattenedChord).toBe(true)
-    expect(tune.notes[1].flattenedChord).toBeUndefined()
+    expect(tune.notes[0].collapsedChord).toBe(true)
+    expect(tune.notes[1].collapsedChord).toBeUndefined()
   })
 
   it('records repeat structure', () => {
@@ -50,5 +60,26 @@ describe('parseAbc', () => {
     const types = tune.bars.map((b) => b.type)
     expect(types).toContain('bar_left_repeat')
     expect(types).toContain('bar_right_repeat')
+  })
+
+  it('ignores chord symbols as accompaniment hints, not pitches', () => {
+    // oran-na-cloiche.abc carries "Am"/"C"/"Dm"/"G"/"Em" chord symbols throughout — none of
+    // them should surface as a note or otherwise perturb the melody line.
+    const [tune] = parseAbc(oranAbc)
+    expect(tune.key).toBe('Amin')
+    expect(tune.notes).toHaveLength(81)
+    expect(tune.notes.slice(0, 4).map((n) => n.writtenName)).toEqual(['c', 'A', 'G', 'A'])
+    expect(tune.notes.every((n) => n.rest || (n.pitch > 0 && Number.isInteger(n.pitch)))).toBe(true)
+  })
+
+  it('known gap: 5/4 has no 3+2/2+3 grouping, so every main beat scores the same', () => {
+    // tansys-golowan.abc is a 5/4 march — a metre felt as asymmetric sub-groups, which
+    // basicBeatStrength does not model (roadmap step 6). Pinning today's real output so a
+    // future grouping-aware fix breaks this deliberately instead of silently.
+    const [tune] = parseAbc(tansysAbc)
+    expect(tune.metre).toEqual([5, 4])
+    expect(tune.notes.slice(0, 12).map((n) => n.beatStrength)).toEqual([
+      1, 0.2, 0.6, 1, 0.6, 0.2, 0.6, 0.2, 0.6, 0.6, 0.2, 1,
+    ])
   })
 })

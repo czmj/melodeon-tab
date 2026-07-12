@@ -1,4 +1,4 @@
-# 0006 — Tab as written; do not unroll repeats
+# 0005 — Tab as written; do not unroll repeats
 
 Status: accepted · Date: 2026-07-03
 

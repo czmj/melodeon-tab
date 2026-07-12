@@ -29,12 +29,11 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
         lowConfidence: false,
       }
     }
-    const { row, position } = resolveCandidate(instrument, fingered.chosen)
+    const { outside, position } = resolveCandidate(instrument, fingered.chosen)
     const push = fingered.chosen.direction === 'push'
-    const outsideRow = row === 1
     return {
       noteIndex: i,
-      text: outsideRow ? `(${position})` : String(position),
+      text: outside ? `(${position})` : String(position),
       pull: !push,
       playable: true,
       rest,

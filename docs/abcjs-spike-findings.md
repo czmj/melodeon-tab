@@ -58,7 +58,7 @@ for the tab display only.
 Join caveats to handle in the adapter:
 - **`setUpAudio` plays the repeats.** A note inside `|: :|` emits one audio event *per pass*,
   all at the same `startChar`, so the raw join yields the pitch duplicated (`^A` in a repeated
-  bar joined to `[70, 70]`). Since we tab as written and do not unroll (ADR 0006), **dedupe
+  bar joined to `[70, 70]`). Since we tab as written and do not unroll (ADR 0005), **dedupe
   pitches per `startChar`** when building the map (keep distinct pitches for future `[GBd]`
   chords, drop exact repeats). Confirmed empirically by the prototype's tests.
 - Grace notes and rolls emit extra short audio events at their own `startChar`; only map the
@@ -81,37 +81,8 @@ Join caveats to handle in the adapter:
 
 ## Decision — DO NOT unroll; tab as written, DP over written order
 
-Decided with Clara (2026-07-03). MVP keeps the tab **concise**: repeats and variant endings
-stay as `|: :|` / 1st–2nd-ending marks in the output, each written note appears once, and the
-DP runs over the **written** note order. The adapter emits notes in written order plus the
-repeat/ending structure the renderer needs.
-
-Three options were on the table:
-
-| | Engine (DP) sees | Final tab |
-|---|---|---|
-| A. Fully unroll | played order | doubled-out, no repeat marks |
-| B. Unroll internally only | played order | concise, keeps `\|: :\|` |
-| **C. No unroll (chosen)** | **written order** | **concise, keeps `\|: :\|`** |
-
-Rationale for C:
-- Concise tab gives each written note exactly one fingering. If two passes ever wanted
-  different fingering, concise tab cannot express it anyway — so B's richer internal view
-  would be collapsed back to one fingering regardless.
-- The only transitions B models that C does not — the `:|`→`|:` jump-back and the 1st/2nd
-  ending seams — all land on section/phrase boundaries, where the cost model already makes
-  bellows reversals nearly free (`melodeon-domain.md`). So the accuracy gap is second-order,
-  and the domain doc explicitly accepts phrase-boundary approximation.
-- Accepted cost: only one fingering (and later, one chord accompaniment) per written note —
-  no "different second time through". A player's PDF example of alternate chords on the repeat
-  exists and would make a good fixture when the bass end is built (post-MVP).
-
-**Upgrade path preserved:** because the tab output is identical, C → B is an engine-only change
-(feed the DP played order, fold the result back). No renderer change. Revisit only if
-section-boundary fingering looks wrong during cost tuning (step 6).
-
-**Warrants ADR 0006 (tab as-written, no unroll, phrase-boundary approximation).** Not written
-yet — will propose it next.
+Decided with Clara (2026-07-03); formalised as ADR 0005 (tab-as-written, no unroll,
+phrase-boundary approximation) — see that ADR for the full rationale and the options considered.
 
 ## Proposed adapter shape (`src/parse`)
 

@@ -4,6 +4,12 @@ import type { FingeredNote, FingeringResult, NoteEvent, Tune } from '../domain/n
 import type { TabCell } from './tab.ts'
 import { aggregateByStartChar, placeTokens } from './staffLayout.ts'
 import type { FingeringInput } from './staffLayout.ts'
+import { DG_STANDARD } from '../domain/instrument.ts'
+import { parseAbc } from '../parse/parseAbc.ts'
+import { mapTuneCandidates } from '../engine/candidates.ts'
+import { fingerWithConfidence } from '../engine/confidence.ts'
+import { renderTab } from './tab.ts'
+import christmasAbc from '../fixtures/a-christmas.abc?raw'
 
 function note(index: number, startChar: number, rest = false): NoteEvent {
   return {
@@ -61,6 +67,22 @@ describe('aggregateByStartChar', () => {
     expect(map.get(10)?.options.map((c) => c.buttonId)).toEqual(['d3', 'g1'])
     expect(map.get(20)?.note.rest).toBe(true)
     expect(map.get(30)?.cell.text).toBe('3')
+  })
+})
+
+describe('aggregateByStartChar with a real collapsed chord', () => {
+  it('surfaces collapsedChord on the note reaching the render layer', () => {
+    const tune = parseAbc(christmasAbc)[0]
+    const lattice = mapTuneCandidates(tune, DG_STANDARD)
+    const fingering = fingerWithConfidence(tune, lattice, () => 0)
+    const cells = renderTab(fingering, DG_STANDARD)
+    const map = aggregateByStartChar([{ tune, fingering, cells, lattice }])
+
+    const collapsedNotes = tune.notes.filter((n) => n.collapsedChord)
+    expect(collapsedNotes).toHaveLength(1)
+
+    const surfaced = map.get(collapsedNotes[0].startChar)
+    expect(surfaced?.note.collapsedChord).toBe(true)
   })
 })
 

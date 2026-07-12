@@ -25,7 +25,7 @@ export interface NoteEvent {
   bar: number
   startChar: number
   rest: boolean
-  flattenedChord?: boolean
+  collapsedChord?: boolean
   beatStrength: number
   phraseBoundaryBefore: boolean
 }

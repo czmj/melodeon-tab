@@ -1,4 +1,4 @@
-# 0005 — Overrides are hard constraints with downstream recomputation
+# 0004 — Overrides are hard constraints with downstream recomputation
 
 Status: accepted · Date: 2026-07-01
 

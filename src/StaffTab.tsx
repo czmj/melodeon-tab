@@ -78,17 +78,22 @@ export function StaffTab({
           fontWeight: pinnedStartChars.has(token.startChar) ? 'bold' : undefined,
         }
 
-        // Nothing to choose between (0 or 1 candidate) — plain non-interactive label,
-        // deliberately unstyled as a button so it reads as not clickable.
+        const chordCollapsed = note.collapsedChord === true
+        const cellText = chordCollapsed ? `${cell.text}*` : cell.text
+        const titleParts: string[] = []
+        if (options.length === 0) titleParts.push('unplayable (rest or diatonic gap)')
+        if (chordCollapsed) titleParts.push(`chord collapsed to top note (${midiToName(note.pitch)})`)
+        const title = titleParts.length > 0 ? titleParts.join(' — ') : undefined
+
         if (!hasChoice) {
           return (
             <span
               key={token.startChar}
-              title={options.length === 0 ? 'unplayable (rest or diatonic gap)' : undefined}
+              title={title}
               className="absolute -translate-x-1/2 inline-flex h-6 items-center justify-center px-2 text-xs"
               style={dynamicStyle}
             >
-              {cell.text}
+              {cellText}
             </span>
           )
         }
@@ -107,8 +112,9 @@ export function StaffTab({
                   size="xs"
                   className="absolute -translate-x-1/2"
                   style={dynamicStyle}
+                  title={title}
                 >
-                  {cell.text}
+                  {cellText}
                 </Button>
               }
             />
@@ -116,6 +122,7 @@ export function StaffTab({
               <DropdownMenuGroup>
                 <DropdownMenuLabel>
                   {note.rest ? 'Rest' : midiToName(note.pitch)}
+                  {chordCollapsed ? ' (chord collapsed to this note)' : ''}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup

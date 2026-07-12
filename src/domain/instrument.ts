@@ -4,6 +4,7 @@ export type Pitch = number
 export interface Button {
   id: string
   row: number
+  outside: boolean
   position: number
   push: Pitch[]
   pull: Pitch[]
@@ -42,42 +43,49 @@ export function candidatesForPitch(instrument: Instrument, midi: Pitch): Candida
 export function resolveCandidate(
   instrument: Instrument,
   candidate: Candidate,
-): { button: Button; row: number; position: number; pitch: Pitch } {
+): { button: Button; row: number; outside: boolean; position: number; pitch: Pitch } {
   const button = instrument.treble.buttons.find((b) => b.id === candidate.buttonId)
   if (!button) throw new Error(`unknown button: ${candidate.buttonId}`)
   const pitches = pitchesInDirection(button, candidate.direction)
-  return { button, row: button.row, position: button.position, pitch: pitches[0] }
+  return { button, row: button.row, outside: button.outside, position: button.position, pitch: pitches[0] }
 }
 
-function button(id: string, row: number, position: number, push: Pitch, pull: Pitch): Button {
-  return { id, row, position, push: [push], pull: [pull] }
+function button(
+  id: string,
+  row: number,
+  outside: boolean,
+  position: number,
+  push: Pitch,
+  pull: Pitch,
+): Button {
+  return { id, row, outside, position, push: [push], pull: [pull] }
 }
 
 const dRow: Button[] = [
-  button('d1', 0, 1, 54, 57),
-  button('d2', 0, 2, 57, 61),
-  button('d3', 0, 3, 62, 64),
-  button('d4', 0, 4, 66, 67),
-  button('d5', 0, 5, 69, 71),
-  button('d6', 0, 6, 74, 73),
-  button('d7', 0, 7, 78, 76),
-  button('d8', 0, 8, 81, 79),
-  button('d9', 0, 9, 86, 83),
-  button('d10', 0, 10, 90, 85),
-  button('d11', 0, 11, 93, 88),
+  button('d1', 0, false, 1, 54, 57),
+  button('d2', 0, false, 2, 57, 61),
+  button('d3', 0, false, 3, 62, 64),
+  button('d4', 0, false, 4, 66, 67),
+  button('d5', 0, false, 5, 69, 71),
+  button('d6', 0, false, 6, 74, 73),
+  button('d7', 0, false, 7, 78, 76),
+  button('d8', 0, false, 8, 81, 79),
+  button('d9', 0, false, 9, 86, 83),
+  button('d10', 0, false, 10, 90, 85),
+  button('d11', 0, false, 11, 93, 88),
 ]
 
 const gRow: Button[] = [
-  button('g1', 1, 1, 59, 62),
-  button('g2', 1, 2, 62, 66),
-  button('g3', 1, 3, 67, 69),
-  button('g4', 1, 4, 71, 72),
-  button('g5', 1, 5, 74, 76),
-  button('g6', 1, 6, 79, 78),
-  button('g7', 1, 7, 83, 81),
-  button('g8', 1, 8, 86, 84),
-  button('g9', 1, 9, 91, 88),
-  button('g10', 1, 10, 95, 90),
+  button('g1', 1, true, 1, 59, 62),
+  button('g2', 1, true, 2, 62, 66),
+  button('g3', 1, true, 3, 67, 69),
+  button('g4', 1, true, 4, 71, 72),
+  button('g5', 1, true, 5, 74, 76),
+  button('g6', 1, true, 6, 79, 78),
+  button('g7', 1, true, 7, 83, 81),
+  button('g8', 1, true, 8, 86, 84),
+  button('g9', 1, true, 9, 91, 88),
+  button('g10', 1, true, 10, 95, 90),
 ]
 
 export const DG_STANDARD: Instrument = {

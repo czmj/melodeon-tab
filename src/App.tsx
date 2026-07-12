@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Toaster } from '@/components/ui/sonner'
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import type { Candidate } from './domain/instrument.ts'
 import { DG_STANDARD } from './domain/instrument.ts'
 import type { Tune } from './domain/notes.ts'
@@ -14,11 +16,11 @@ import { aggregateByStartChar } from './render/staffLayout.ts'
 import { renderTab } from './render/tab.ts'
 import { StaffTab } from './StaffTab.tsx'
 
-type Pins = Record<number, Candidate>
+export type Pins = Record<number, Candidate>
 
-const STORAGE_KEY = 'melodeon-tab-state'
+export const STORAGE_KEY = 'melodeon-tab-state'
 
-function isKnownCandidate(value: unknown): value is Candidate {
+export function isKnownCandidate(value: unknown): value is Candidate {
   if (typeof value !== 'object' || value === null) return false
   const direction = (value as { direction?: unknown }).direction
   const buttonId = (value as { buttonId?: unknown }).buttonId
@@ -28,7 +30,11 @@ function isKnownCandidate(value: unknown): value is Candidate {
   )
 }
 
-function loadState(): { abc: string; pins: Pins } {
+function sameCandidate(a: Candidate, b: Candidate): boolean {
+  return a.buttonId === b.buttonId && a.direction === b.direction
+}
+
+export function loadState(): { abc: string; pins: Pins } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -70,22 +76,52 @@ export function App() {
     }
   }, [abc])
 
-  const byStartChar = useMemo(() => {
+  const fingeringInputs: (FingeringInput & { validPinStartChars: Set<number> })[] = useMemo(() => {
     const cost = makeCostFn(DG_STANDARD)
-    const inputs: FingeringInput[] = result.tunes
+    return result.tunes
       .filter((tune) => tune.notes.length > 0)
       .map((tune) => {
         const lattice = mapTuneCandidates(tune, DG_STANDARD)
         const pinMap = new Map<number, Candidate>()
+        const validPinStartChars = new Set<number>()
         tune.notes.forEach((n) => {
           const pin = pins[n.startChar]
-          if (pin) pinMap.set(n.index, pin)
+          if (pin && (lattice[n.index] ?? []).some((c) => sameCandidate(c, pin))) {
+            pinMap.set(n.index, pin)
+            validPinStartChars.add(n.startChar)
+          }
         })
         const fingering = fingerWithConfidence(tune, lattice, cost, pinMap)
-        return { tune, fingering, cells: renderTab(fingering, DG_STANDARD), lattice }
+        return {
+          tune,
+          fingering,
+          cells: renderTab(fingering, DG_STANDARD),
+          lattice,
+          validPinStartChars,
+        }
       })
-    return aggregateByStartChar(inputs)
   }, [result, pins])
+
+  const byStartChar = useMemo(() => aggregateByStartChar(fingeringInputs), [fingeringInputs])
+
+  useEffect(() => {
+    const validStartChars = new Set<number>()
+    fingeringInputs.forEach((input) =>
+      input.validPinStartChars.forEach((sc) => validStartChars.add(sc)),
+    )
+    const stale = Object.keys(pins)
+      .map(Number)
+      .filter((sc) => !validStartChars.has(sc))
+    if (stale.length === 0) return
+    setPins((p) => {
+      const next = { ...p }
+      stale.forEach((sc) => delete next[sc])
+      return next
+    })
+    toast('Overrides cleared', {
+      description: 'Your edit shifted the notes they were pinned to, so those choices no longer applied.',
+    })
+  }, [fingeringInputs])
 
   const pinnedStartChars = useMemo(
     () => new Set(Object.keys(pins).map(Number)),
@@ -125,7 +161,7 @@ export function App() {
           <span>Overrides: {pinCount}</span>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={pinCount === 0}
             onClick={() => setPins({})}
@@ -147,6 +183,7 @@ export function App() {
           onClearPin={() => selected !== null && clearPin(selected)}
         />
       </div>
+      <Toaster />
     </div>
   )
 }

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Agentic working docs (specs/plans/notes) — session scratch, not tracked project documentation
+docs/superpowers/

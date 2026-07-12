@@ -22,7 +22,13 @@ describe('DG_STANDARD', () => {
   it('resolves a candidate to its button, row, position and sounding pitch', () => {
     const r = resolveCandidate(DG_STANDARD, { buttonId: 'd3', direction: 'push' })
     expect(r.row).toBe(0)
+    expect(r.outside).toBe(false)
     expect(r.position).toBe(3)
     expect(r.pitch).toBe(62)
+  })
+
+  it('flags the G row as outside and the D row as inside', () => {
+    expect(resolveCandidate(DG_STANDARD, { buttonId: 'd1', direction: 'push' }).outside).toBe(false)
+    expect(resolveCandidate(DG_STANDARD, { buttonId: 'g1', direction: 'push' }).outside).toBe(true)
   })
 })

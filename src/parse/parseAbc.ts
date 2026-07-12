@@ -64,7 +64,9 @@ export function parseAbc(abc: string): Tune[] {
         const tiedFromPrevious =
           !rest && pitches.length > 0 && pitches.every((p) => p.endTie)
         if (tiedFromPrevious && notes.length > 0) {
-          notes[notes.length - 1].durationTicks += durationTicks
+          const merged = notes[notes.length - 1]
+          merged.durationTicks += durationTicks
+          pendingBoundary = merged.durationTicks >= PPWN / 2
           startTicks += durationTicks
           seenNoteInBar = true
           continue
@@ -80,7 +82,7 @@ export function parseAbc(abc: string): Tune[] {
           bar,
           startChar: item.startChar,
           rest,
-          flattenedChord: !rest && pitches.length > 1 ? true : undefined,
+          collapsedChord: !rest && pitches.length > 1 ? true : undefined,
           beatStrength: basicBeatStrength(startTicks - barStartTicks, metre),
           phraseBoundaryBefore: pendingBoundary,
         })
