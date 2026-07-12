@@ -6,16 +6,16 @@ export interface CostWeights {
   reversalStrong: number
   reversalWeak: number
   rowChange: number
-  air: number
-  airComfort: number
+  airPenaltyRate: number
+  airComfortBeats: number
 }
 
 export const DEFAULT_WEIGHTS: CostWeights = {
   reversalStrong: 0.25,
   reversalWeak: 1.5,
   rowChange: 0.5,
-  air: 0.4,
-  airComfort: 3,
+  airPenaltyRate: 0.4,
+  airComfortBeats: 8,
 }
 
 export function makeCostFn(instrument: Instrument, weights: CostWeights = DEFAULT_WEIGHTS): CostFn {
@@ -25,8 +25,8 @@ export function makeCostFn(instrument: Instrument, weights: CostWeights = DEFAUL
     if (from.direction !== to.direction) {
       cost += weights.reversalWeak - (weights.reversalWeak - weights.reversalStrong) * context.beatStrength
     } else {
-      const run = context.sameDirectionRun ?? 0
-      cost += weights.air * Math.max(0, run - weights.airComfort)
+      const beats = context.sameDirectionBeats ?? 0
+      cost += weights.airPenaltyRate * Math.max(0, beats - weights.airComfortBeats)
     }
     if (resolveCandidate(instrument, from).row !== resolveCandidate(instrument, to).row) {
       cost += weights.rowChange

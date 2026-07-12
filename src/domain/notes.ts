@@ -64,7 +64,7 @@ export interface CostContext {
   metre: [number, number]
   beatStrength: number
   phraseBoundaryBefore: boolean
-  sameDirectionRun?: number
+  sameDirectionBeats?: number
 }
 
 export type CostFn = (from: Candidate | null, to: Candidate, context: CostContext) => number

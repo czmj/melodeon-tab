@@ -1,10 +1,6 @@
 import { resolveCandidate } from '../domain/instrument.ts'
-import type { Candidate, Direction, Instrument } from '../domain/instrument.ts'
+import type { Candidate, Instrument } from '../domain/instrument.ts'
 import type { FingeringResult } from '../domain/notes.ts'
-
-export function directionArrow(direction: Direction): string {
-  return direction === 'push' ? '↑' : '↓'
-}
 
 export function candidateLabel(instrument: Instrument, candidate: Candidate): string {
   const { row, position } = resolveCandidate(instrument, candidate)
@@ -14,9 +10,7 @@ export function candidateLabel(instrument: Instrument, candidate: Candidate): st
 export interface TabCell {
   noteIndex: number
   text: string
-  arrow: string
-  colour: 'red' | 'blue' | null
-  underline: boolean
+  pull: boolean
   playable: boolean
   rest: boolean
   lowConfidence: boolean
@@ -29,9 +23,7 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
       return {
         noteIndex: i,
         text: rest ? '-' : '?',
-        arrow: '',
-        colour: null,
-        underline: false,
+        pull: false,
         playable: false,
         rest,
         lowConfidence: false,
@@ -39,12 +31,11 @@ export function renderTab(result: FingeringResult, instrument: Instrument): TabC
     }
     const { row, position } = resolveCandidate(instrument, fingered.chosen)
     const push = fingered.chosen.direction === 'push'
+    const outsideRow = row === 1
     return {
       noteIndex: i,
-      text: String(position),
-      arrow: push ? '↑' : '↓',
-      colour: push ? 'red' : 'blue',
-      underline: row === 1,
+      text: outsideRow ? `(${position})` : String(position),
+      pull: !push,
       playable: true,
       rest,
       lowConfidence: fingered.confidence < 1,

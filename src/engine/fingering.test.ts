@@ -82,8 +82,8 @@ describe('computeFingering', () => {
     const airCost: CostFn = (from, to, context) => {
       if (from === null) return 0
       if (from.direction !== to.direction) return 1
-      const run = context.sameDirectionRun ?? 0
-      return run >= 3 ? run - 2 : 0
+      const beats = context.sameDirectionBeats ?? 0
+      return beats >= 3 ? beats - 2 : 0
     }
     const result = computeFingering(fakeTune(8), lattice, airCost)
     const directions = new Set(result.notes.map((n) => n.chosen?.direction))

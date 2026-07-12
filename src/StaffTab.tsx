@@ -74,8 +74,7 @@ export function StaffTab({
         const dynamicStyle: CSSProperties = {
           left: token.x,
           top: token.y,
-          color: cell.colour ?? undefined,
-          textDecoration: cell.underline ? 'underline' : undefined,
+          textDecoration: cell.pull ? 'underline' : undefined,
           fontWeight: pinnedStartChars.has(token.startChar) ? 'bold' : undefined,
         }
 
@@ -90,7 +89,6 @@ export function StaffTab({
               style={dynamicStyle}
             >
               {cell.text}
-              {cell.arrow}
             </span>
           )
         }
@@ -111,7 +109,6 @@ export function StaffTab({
                   style={dynamicStyle}
                 >
                   {cell.text}
-                  {cell.arrow}
                 </Button>
               }
             />

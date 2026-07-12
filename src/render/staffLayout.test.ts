@@ -24,9 +24,7 @@ function cell(noteIndex: number, rest = false): TabCell {
   return {
     noteIndex,
     text: rest ? '-' : '3',
-    arrow: rest ? '' : '↑',
-    colour: rest ? null : 'red',
-    underline: false,
+    pull: false,
     playable: !rest,
     rest,
     lowConfidence: false,

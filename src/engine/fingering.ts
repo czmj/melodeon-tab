@@ -1,11 +1,13 @@
 import type { Candidate } from '../domain/instrument.ts'
 import type { CostContext, CostFn, FingeredNote, FingeringResult, Tune } from '../domain/notes.ts'
+import { PPWN } from '../domain/notes.ts'
 
-const RUN_CAP = 12
+const TICKS_PER_BEAT = PPWN / 4
+const RUN_CAP_TICKS = 12 * TICKS_PER_BEAT
 
 interface Node {
   candidate: Candidate
-  run: number
+  runTicks: number
   cost: number
   back: number
 }
@@ -44,25 +46,29 @@ export function computeFingering(
 
     for (const to of candidates) {
       if (previous === null) {
-        const context: CostContext = { ...baseContext, sameDirectionRun: 0 }
-        nodes.push({ candidate: to, run: 1, cost: cost(null, to, context), back: -1 })
+        const context: CostContext = { ...baseContext, sameDirectionBeats: 0 }
+        const runTicks = Math.min(note.durationTicks, RUN_CAP_TICKS)
+        nodes.push({ candidate: to, runTicks, cost: cost(null, to, context), back: -1 })
         continue
       }
-      const bestByRun = new Map<number, { cost: number; back: number }>()
+      const bestByRunTicks = new Map<number, { cost: number; back: number }>()
       for (let j = 0; j < previous.length; j++) {
         const p = previous[j]
-        const incomingRun = note.phraseBoundaryBefore ? 0 : p.run
-        const context: CostContext = { ...baseContext, sameDirectionRun: incomingRun }
+        const incomingRunTicks = note.phraseBoundaryBefore ? 0 : p.runTicks
+        const context: CostContext = { ...baseContext, sameDirectionBeats: incomingRunTicks / TICKS_PER_BEAT }
         const sameDirection = p.candidate.direction === to.direction
-        const run = sameDirection ? Math.min(incomingRun + 1, RUN_CAP) : 1
+        const runTicks = Math.min(
+          sameDirection ? incomingRunTicks + note.durationTicks : note.durationTicks,
+          RUN_CAP_TICKS,
+        )
         const total = p.cost + cost(p.candidate, to, context)
-        const existing = bestByRun.get(run)
+        const existing = bestByRunTicks.get(runTicks)
         if (!existing || total < existing.cost) {
-          bestByRun.set(run, { cost: total, back: j })
+          bestByRunTicks.set(runTicks, { cost: total, back: j })
         }
       }
-      for (const [run, best] of bestByRun) {
-        nodes.push({ candidate: to, run, cost: best.cost, back: best.back })
+      for (const [runTicks, best] of bestByRunTicks) {
+        nodes.push({ candidate: to, runTicks, cost: best.cost, back: best.back })
       }
     }
     columns.push(nodes)

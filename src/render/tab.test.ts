@@ -15,24 +15,20 @@ function tab(abc: string) {
 }
 
 describe('renderTab', () => {
-  it('renders a D-row push: red, up arrow, no underline', () => {
+  it('renders an inside-row push: bare number, no underline', () => {
     const { cells } = tab('X:1\nL:1/8\nK:D\nD|')
     expect(cells[0]).toMatchObject({
       text: '3',
-      arrow: '↑',
-      colour: 'red',
-      underline: false,
+      pull: false,
       playable: true,
     })
   })
 
-  it('renders a G-row pull: blue, down arrow, underlined', () => {
+  it('renders an outside-row pull: parenthesised number, underlined', () => {
     const { cells } = tab('X:1\nL:1/8\nK:C\nc|')
     expect(cells[0]).toMatchObject({
-      text: '4',
-      arrow: '↓',
-      colour: 'blue',
-      underline: true,
+      text: '(4)',
+      pull: true,
       playable: true,
     })
   })
@@ -48,13 +44,12 @@ describe('renderTab', () => {
     expect(cells[i]).toMatchObject({ text: '?', playable: false })
   })
 
-  it('produces one cell per note; playable cells carry a direction arrow and colour', () => {
+  it('produces one cell per note; playable cells carry a bare or parenthesised button number', () => {
     const { tune, cells } = tab(moonAbc)
     expect(cells.length).toBe(tune.notes.length)
     for (const cell of cells) {
       if (cell.playable) {
-        expect(['↑', '↓']).toContain(cell.arrow)
-        expect(['red', 'blue']).toContain(cell.colour)
+        expect(cell.text).toMatch(/^\(?\d+\)?$/)
       }
     }
   })

@@ -45,7 +45,7 @@ Tuning: hand-finger the fixture tunes as ground truth, adjust weights until the 
 
 ## Tab systems
 
-Target styles: Rennie tab, Mel Biggs method, Mally's (Dave Mallinson). Common convention family: button numbers per row, row distinguished notationally (e.g. prime/dash), direction by underline/arrows/line position. Exact conventions of each **unverified — check against real published examples before building each renderer.** Architecturally all are pure views over (button, row, direction, duration).
+Target styles: Rennie tab, Mel Biggs method, Mally's (Dave Mallinson). Common convention family: button numbers per row, row distinguished notationally (e.g. prime/dash), direction by underline/arrows/line position. Mel Biggs is **verified** against a real published example (© Mel Biggs Music, purchased sheet music, not checked into the repo; see ADR 0008) and is what `TabCell` implements: bare number = inside/D row, `(parenthesised)` = outside/G row, underline = pull. Rennie and Mally's conventions remain **unverified — check against real published examples before building each renderer.** Architecturally all are pure views over (button, row, direction, duration).
 
 ## MVP scope
 

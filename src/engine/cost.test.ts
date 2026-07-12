@@ -4,11 +4,11 @@ import type { Candidate } from '../domain/instrument.ts'
 import type { CostContext } from '../domain/notes.ts'
 import { DEFAULT_WEIGHTS, makeCostFn } from './cost.ts'
 
-const ctx = (beatStrength: number, sameDirectionRun = 0): CostContext => ({
+const ctx = (beatStrength: number, sameDirectionBeats = 0): CostContext => ({
   metre: [4, 4],
   beatStrength,
   phraseBoundaryBefore: false,
-  sameDirectionRun,
+  sameDirectionBeats,
 })
 
 const d3push: Candidate = { buttonId: 'd3', direction: 'push' }
@@ -49,17 +49,17 @@ describe('makeCostFn', () => {
   })
 
   it('does not penalise same-direction runs up to the comfort length', () => {
-    expect(cost(d3push, d5push, ctx(0.2, 3))).toBe(0)
+    expect(cost(d3push, d5push, ctx(0.2, 8))).toBe(0)
   })
 
   it('penalises a same-direction run beyond the comfort length (air)', () => {
-    expect(cost(d3push, d5push, ctx(0.2, 5))).toBeCloseTo(0.8)
+    expect(cost(d3push, d5push, ctx(0.2, 10))).toBeCloseTo(0.8)
   })
 
   it('grows the air penalty as the run lengthens', () => {
-    const run5 = cost(d3push, d5push, ctx(0.2, 5))
-    const run7 = cost(d3push, d5push, ctx(0.2, 7))
-    expect(run7).toBeGreaterThan(run5)
+    const beats9 = cost(d3push, d5push, ctx(0.2, 9))
+    const beats11 = cost(d3push, d5push, ctx(0.2, 11))
+    expect(beats11).toBeGreaterThan(beats9)
   })
 
   it('prefers reversing on a strong beat but cross-rowing on a weak one', () => {
