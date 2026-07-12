@@ -4,6 +4,7 @@ import moonAbc from '../fixtures/moon-and-seven-stars.abc?raw'
 import jiggeryAbc from '../fixtures/jiggery-pokerwork.abc?raw'
 import oranAbc from '../fixtures/oran-na-cloiche.abc?raw'
 import tansysAbc from '../fixtures/tansys-golowan.abc?raw'
+import christmasAbc from '../fixtures/a-christmas.abc?raw'
 
 describe('parseAbc', () => {
   it('extracts header, notes and sounding pitch from a D major jig', () => {
@@ -70,6 +71,22 @@ describe('parseAbc', () => {
     expect(tune.notes).toHaveLength(81)
     expect(tune.notes.slice(0, 4).map((n) => n.writtenName)).toEqual(['c', 'A', 'G', 'A'])
     expect(tune.notes.every((n) => n.rest || (n.pitch > 0 && Number.isInteger(n.pitch)))).toBe(true)
+  })
+
+  it('captures chord symbols as an accompaniment hint on the note they precede', () => {
+    const [tune] = parseAbc(oranAbc)
+    const symbols = tune.notes.map((n) => n.chordSymbol).filter((s): s is string => s !== undefined)
+    expect(new Set(symbols)).toEqual(new Set(['Am', 'C', 'Dm', 'Em', 'G']))
+    const firstAm = tune.notes.find((n) => n.chordSymbol)
+    expect(firstAm?.chordSymbol).toBe('Am')
+  })
+
+  it('drops a text annotation that is not a real chord symbol', () => {
+    // a-christmas.abc has a "to" annotation (abcjs tags it position:"default", like a chord);
+    // parseChordSymbol rejects it, so it must not land in the model as a chord.
+    const [tune] = parseAbc(christmasAbc)
+    expect(tune.notes.some((n) => n.chordSymbol === 'to')).toBe(false)
+    expect(tune.notes.every((n) => n.chordSymbol === undefined)).toBe(true)
   })
 
   it('known gap: 5/4 has no 3+2/2+3 grouping, so every main beat scores the same', () => {

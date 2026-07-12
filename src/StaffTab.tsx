@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderStaffNotation } from './parse/renderStaff.ts'
 import type { StaffAnchor } from './parse/renderStaff.ts'
-import { placeTokens } from './render/staffLayout.ts'
+import { placeLabels, placeTokens } from './render/staffLayout.ts'
 import type { NoteFingering } from './render/staffLayout.ts'
 import type { Candidate } from './domain/instrument.ts'
 import { DG_STANDARD } from './domain/instrument.ts'
@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const TOKEN_OFFSET_Y = 34
+const BASS_OFFSET_Y = 44
+const CHORD_OFFSET_Y = 64
 
 function candidateKey(c: Candidate): string {
   return `${c.buttonId}-${c.direction}`
@@ -29,6 +31,8 @@ function candidateKey(c: Candidate): string {
 export function StaffTab({
   abc,
   byStartChar,
+  bassByStartChar,
+  chordByStartChar,
   onSelect,
   selectedStartChar,
   pinnedStartChars,
@@ -38,6 +42,8 @@ export function StaffTab({
 }: {
   abc: string
   byStartChar: Map<number, NoteFingering>
+  bassByStartChar: Map<number, { text: string; pull: boolean }>
+  chordByStartChar: Map<number, { text: string; pull: boolean }>
   onSelect: (startChar: number | null) => void
   selectedStartChar: number | null
   pinnedStartChars: Set<number>
@@ -61,10 +67,30 @@ export function StaffTab({
   }, [abc])
 
   const tokens = placeTokens(anchors, byStartChar, TOKEN_OFFSET_Y)
+  const bassLabels = placeLabels(anchors, bassByStartChar, BASS_OFFSET_Y)
+  const chordLabels = placeLabels(anchors, chordByStartChar, CHORD_OFFSET_Y)
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
       <div ref={staffRef} />
+      {bassLabels.map((label) => (
+        <span
+          key={`bass-${label.startChar}`}
+          className="absolute -translate-x-1/2 inline-flex h-5 items-center justify-center px-1 text-xs font-semibold"
+          style={{ left: label.x, top: label.y, textDecoration: label.pull ? 'underline' : undefined }}
+        >
+          {label.text}
+        </span>
+      ))}
+      {chordLabels.map((label) => (
+        <span
+          key={`chord-${label.startChar}`}
+          className="absolute -translate-x-1/2 inline-flex h-5 items-center justify-center px-1 text-xs italic text-muted-foreground"
+          style={{ left: label.x, top: label.y, textDecoration: label.pull ? 'underline' : undefined }}
+        >
+          {label.text}
+        </span>
+      ))}
       {tokens.map((token) => {
         const { cell, note, options, chosen } = token.fingering
         const isOpen = selectedStartChar === token.startChar

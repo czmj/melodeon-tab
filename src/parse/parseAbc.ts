@@ -2,6 +2,12 @@ import { parseOnly } from 'abcjs'
 import type { TuneObject } from 'abcjs'
 import { PPWN, basicBeatStrength, wholeNotesToTicks } from '../domain/notes.ts'
 import type { BarMarker, NoteEvent, Tune } from '../domain/notes.ts'
+import { parseChordSymbol } from '../domain/chord.ts'
+
+function chordSymbolOf(item: { chord?: Array<{ name?: string }> }): string | undefined {
+  const name = (item.chord ?? []).map((c) => c.name).find((n) => n && parseChordSymbol(n))
+  return name ?? undefined
+}
 
 function keyLabel(tune: TuneObject): string {
   const k = tune.getKeySignature()
@@ -83,6 +89,7 @@ export function parseAbc(abc: string): Tune[] {
           startChar: item.startChar,
           rest,
           collapsedChord: !rest && pitches.length > 1 ? true : undefined,
+          chordSymbol: chordSymbolOf(item),
           beatStrength: basicBeatStrength(startTicks - barStartTicks, metre),
           phraseBoundaryBefore: pendingBoundary,
         })

@@ -8,6 +8,7 @@ export interface Button {
   position: number
   push: Pitch[]
   pull: Pitch[]
+  role?: 'bass' | 'chord'
 }
 
 export interface Keyboard {
@@ -40,14 +41,38 @@ export function candidatesForPitch(instrument: Instrument, midi: Pitch): Candida
   return result
 }
 
+export function allButtons(instrument: Instrument): Button[] {
+  return [...instrument.treble.buttons, ...instrument.bass.buttons]
+}
+
+export function buttonsInRole(instrument: Instrument, role: 'bass' | 'chord'): Button[] {
+  return instrument.bass.buttons.filter((b) => b.role === role)
+}
+
 export function resolveCandidate(
   instrument: Instrument,
   candidate: Candidate,
-): { button: Button; row: number; outside: boolean; position: number; pitch: Pitch } {
-  const button = instrument.treble.buttons.find((b) => b.id === candidate.buttonId)
+): {
+  button: Button
+  row: number
+  outside: boolean
+  position: number
+  pitch: Pitch
+  pitches: Pitch[]
+  role?: 'bass' | 'chord'
+} {
+  const button = allButtons(instrument).find((b) => b.id === candidate.buttonId)
   if (!button) throw new Error(`unknown button: ${candidate.buttonId}`)
   const pitches = pitchesInDirection(button, candidate.direction)
-  return { button, row: button.row, outside: button.outside, position: button.position, pitch: pitches[0] }
+  return {
+    button,
+    row: button.row,
+    outside: button.outside,
+    position: button.position,
+    pitch: pitches[0],
+    pitches,
+    role: button.role,
+  }
 }
 
 function button(
@@ -88,10 +113,30 @@ const gRow: Button[] = [
   button('g10', 1, true, 10, 95, 90),
 ]
 
+function bassButton(id: string, row: number, position: number, push: Pitch, pull: Pitch): Button {
+  return { id, row, outside: false, position, push: [push], pull: [pull], role: 'bass' }
+}
+
+function chordButton(id: string, row: number, position: number, push: Pitch[], pull: Pitch[]): Button {
+  return { id, row, outside: false, position, push, pull, role: 'chord' }
+}
+
+const bassEnd: Button[] = [
+  chordButton('chord1', 0, 1, [50, 54, 57], [57, 61, 64]),
+  chordButton('chord2', 1, 1, [59, 63, 66], [52, 55, 59]),
+  bassButton('bass1', 0, 2, 50, 45),
+  bassButton('bass2', 1, 2, 47, 52),
+  chordButton('chord3', 0, 3, [55, 59, 62], [50, 54, 57]),
+  chordButton('chord4', 1, 3, [48, 52, 55], [48, 52, 55]),
+  bassButton('bass3', 0, 4, 43, 50),
+  bassButton('bass4', 1, 4, 48, 48),
+]
+
 export const DG_STANDARD: Instrument = {
   id: 'dg-standard',
   name: 'D/G standard (21-button)',
-  source: 'lesterbailey.org "D/G 21 with low notes", verified 2026-07-05',
+  source:
+    'lesterbailey.org "D/G 21 with low notes", verified 2026-07-05; bass end transcribed 2026-07-11, bass octaves assigned by convention (chart gives note names only)',
   treble: { buttons: [...dRow, ...gRow] },
-  bass: { buttons: [] },
+  bass: { buttons: bassEnd },
 }

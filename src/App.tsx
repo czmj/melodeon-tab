@@ -6,11 +6,13 @@ import { toast } from 'sonner'
 import type { Candidate } from './domain/instrument.ts'
 import { DG_STANDARD } from './domain/instrument.ts'
 import type { Tune } from './domain/notes.ts'
+import { suggestAccompaniment } from './engine/accompaniment.ts'
 import { mapTuneCandidates } from './engine/candidates.ts'
 import { fingerWithConfidence } from './engine/confidence.ts'
 import { makeCostFn } from './engine/cost.ts'
 import moonAbc from './fixtures/moon-and-seven-stars.abc?raw'
 import { parseAbc } from './parse/parseAbc.ts'
+import { collapseBassLine, renderBassLine } from './render/bassLine.ts'
 import type { FingeringInput } from './render/staffLayout.ts'
 import { aggregateByStartChar } from './render/staffLayout.ts'
 import { renderTab } from './render/tab.ts'
@@ -104,6 +106,22 @@ export function App() {
 
   const byStartChar = useMemo(() => aggregateByStartChar(fingeringInputs), [fingeringInputs])
 
+  const bassLine = useMemo(() => {
+    const bass = new Map<number, { text: string; pull: boolean }>()
+    const chord = new Map<number, { text: string; pull: boolean }>()
+    for (const input of fingeringInputs) {
+      const suggestions = suggestAccompaniment(input.tune, input.fingering, DG_STANDARD)
+      const collapsed = collapseBassLine(renderBassLine(suggestions))
+      for (const t of collapsed.bass) {
+        bass.set(input.tune.notes[t.noteIndex].startChar, { text: t.text, pull: t.pull })
+      }
+      for (const t of collapsed.chord) {
+        chord.set(input.tune.notes[t.noteIndex].startChar, { text: t.text, pull: t.pull })
+      }
+    }
+    return { bass, chord }
+  }, [fingeringInputs])
+
   useEffect(() => {
     const validStartChars = new Set<number>()
     fingeringInputs.forEach((input) =>
@@ -175,6 +193,8 @@ export function App() {
         <StaffTab
           abc={abc}
           byStartChar={byStartChar}
+          bassByStartChar={bassLine.bass}
+          chordByStartChar={bassLine.chord}
           onSelect={setSelected}
           selectedStartChar={selected}
           pinnedStartChars={pinnedStartChars}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Candidate } from '../domain/instrument.ts'
 import type { FingeredNote, FingeringResult, NoteEvent, Tune } from '../domain/notes.ts'
 import type { TabCell } from './tab.ts'
-import { aggregateByStartChar, placeTokens } from './staffLayout.ts'
+import { aggregateByStartChar, placeLabels, placeTokens } from './staffLayout.ts'
 import type { FingeringInput } from './staffLayout.ts'
 import { DG_STANDARD } from '../domain/instrument.ts'
 import { parseAbc } from '../parse/parseAbc.ts'
@@ -99,5 +99,25 @@ describe('placeTokens', () => {
     expect(tokens.map((t) => t.startChar)).toEqual([10, 30])
     expect(tokens.find((t) => t.startChar === 10)).toMatchObject({ x: 5, y: 65 })
     expect(tokens.find((t) => t.startChar === 30)).toMatchObject({ x: 2, y: 175 })
+  })
+})
+
+describe('placeLabels', () => {
+  it('places labels below each row bottom and skips startChars not in the map', () => {
+    const anchors = [
+      { startChar: 10, x: 5, y: 100 },
+      { startChar: 20, x: 30, y: 90 },
+      { startChar: 30, x: 2, y: 200 },
+      { startChar: 40, x: 40, y: 210 },
+    ]
+    const map = new Map([
+      [10, { text: 'D', pull: false }],
+      [30, { text: 'A', pull: true }],
+    ])
+    const labels = placeLabels(anchors, map, 20)
+    expect(labels).toEqual([
+      { startChar: 10, x: 5, y: 120, text: 'D', pull: false },
+      { startChar: 30, x: 2, y: 230, text: 'A', pull: true },
+    ])
   })
 })
