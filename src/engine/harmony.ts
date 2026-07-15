@@ -191,7 +191,7 @@ export function analyseHarmony(tune: Tune, instrument: Instrument): NoteHarmony[
     return prefCache.get(key) ?? null
   }
 
-  return tune.notes.map((note, i) => {
+  return tune.notes.map((_note, i) => {
     const explicit = written[i]
     if (explicit) {
       return {

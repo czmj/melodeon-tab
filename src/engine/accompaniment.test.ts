@@ -33,7 +33,7 @@ function tuneOf(notes: NoteEvent[], chordChanges: ChordChange[] = []): Tune {
 }
 
 function chg(startChar: number, startTicks: number, symbol: string): ChordChange {
-  return { startChar, startTicks, chord: parseChordSymbol(symbol)! }
+  return { startChar, startTicks, chord: parseChordSymbol(symbol)!, symbol }
 }
 
 function fingeringOf(tune: Tune, directions: (Direction | null)[]): FingeringResult {

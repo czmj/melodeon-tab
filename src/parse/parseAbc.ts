@@ -69,7 +69,7 @@ export function parseAbc(abc: string): Tune[] {
 
     for (const item of items) {
       if (item.el_type === 'note') {
-        const parsedChord = chordOf(item)
+        const parsedChord = chordOf(item as { chord?: Array<{ name?: string }> })
         if (parsedChord) {
           const last = chordChanges[chordChanges.length - 1]
           if (!last || last.symbol !== parsedChord.symbol) {
